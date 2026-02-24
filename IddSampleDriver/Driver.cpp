@@ -479,8 +479,6 @@ void SwapChainProcessor::RunCore()
         {
             // We have new frame to process, the surface has a reference on it that the driver has to release
             AcquiredBuffer.Attach(Buffer.MetaData.pSurface);
-
-
             ComPtr<ID3D11Texture2D> texture;
             HRESULT hrTexture = AcquiredBuffer.As(&texture);
             if (SUCCEEDED(hrTexture) && m_pBuffer)
@@ -516,7 +514,6 @@ void SwapChainProcessor::RunCore()
                     );
                 }
             }
-
             AcquiredBuffer.Reset();
 
             // Indicate to OS that we have finished inital processing of the frame, it is a hint that
@@ -767,15 +764,18 @@ NTSTATUS IndirectDeviceContext::RemoveMonitor(uint16_t MonitorId)
     return status;
 }
 
-IndirectMonitorContext::IndirectMonitorContext(_In_ IDDCX_MONITOR Monitor, _In_ CreateMonitorRequest* pRequest):
-    m_Monitor(Monitor), m_Config(pRequest->config)
+IndirectMonitorContext::IndirectMonitorContext(_In_ IDDCX_MONITOR Monitor, _In_ CreateMonitorRequest* pRequest)
 {
-    m_pBuffer = nullptr;
+    m_Monitor = Monitor;
+    m_Config = pRequest->config;
     m_frameReadyName = pRequest->frameReadyName;
     m_frameProcessedName = pRequest->frameProcessedName;
     m_sharedMemoryName = pRequest->sharedMemoryName;
     m_sharedTextureName1 = pRequest->sharedTextureName1;
     m_sharedTextureName2 = pRequest->sharedTextureName2;
+
+    m_pBuffer = nullptr;
+    m_pVideoBuffer = nullptr;
 
 }
 
@@ -811,18 +811,6 @@ bool IndirectMonitorContext::OpenSharedBuffer()
     return true;
 }
 
-bool IndirectMonitorContext::OpenSharedTextures(Direct3DDevice* pD3DDevice) {
-    
-    m_pVideo = new VideoBuffer();
-
-    if (!m_pVideo->Initialize(pD3DDevice->Device,m_frameReadyName.c_str(),m_frameProcessedName.c_str(),m_sharedTextureName1.c_str(),m_sharedTextureName2.c_str())) {
-        DRV_LOG("OpenSharedTExtures init ERROR");
-        return false;
-    }
-
-    return true;
-}
-
 IDDCX_MONITOR IndirectMonitorContext::GetMonitorHandle() const
 { 
     return m_Monitor; 
@@ -851,10 +839,11 @@ void IndirectMonitorContext::AssignSwapChain(IDDCX_SWAPCHAIN SwapChain, LUID Ren
             DRV_LOG("OpenSharedBuffer error");
             return;
         }
-        if (!OpenSharedTextures(Device.get())) {
-            DRV_LOG("OpenSharedTextures error");
-            return;
-        }
+        //m_pVideoBuffer = new VideoBuffer(m_Config.width, m_Config.height, m_Config.byteDepth);
+        //if (!m_pVideoBuffer->Initialize(Device->Device,m_frameReadyName.c_str(),m_frameProcessedName.c_str(),m_sharedMemoryName.c_str(),m_sharedTextureName1.c_str(),m_sharedTextureName2.c_str())) {
+        //    DRV_LOG("m_pVideoBuffer->Initializ error");
+        //    return ;
+        //}
         m_ProcessingThread.reset(new SwapChainProcessor(SwapChain, Device, NewFrameEvent,m_pBuffer));
     }
 }
@@ -876,8 +865,6 @@ bool DoubleBuffer::Initialize(HANDLE hSharedMemory,
     uint16_t height,
     uint16_t byteDepth)
 {
-
-    HANDLE hCurrentProcess = GetCurrentProcess();
 
     m_hSharedMemory = hSharedMemory;
     m_hFrameReadyEvent = hFrameReadyEvent;
@@ -1054,10 +1041,17 @@ void DoubleBuffer::Cleanup()
 
 #pragma region VideoBuffer
 
+VideoBuffer::VideoBuffer(uint16_t width, uint16_t height, uint16_t byteDepth) {
+    m_width = width;
+    m_height = height;
+    m_byteDepth = m_byteDepth;
+}
+
 bool VideoBuffer::Initialize(
     Microsoft::WRL::ComPtr<ID3D11Device> device,
     const wchar_t* frameReadyName,
     const wchar_t* frameProcessedName,
+    const wchar_t* sharedInfoName,
     const wchar_t* sharedTextureName1,
     const wchar_t* sharedTextureName2)
 {
@@ -1069,8 +1063,13 @@ bool VideoBuffer::Initialize(
     DRV_LOG("OpenEventW m_hFrameProcessedEvent returned hr=0x%p",
         m_hFrameProcessedEvent);
 
-    HRESULT hr = device->QueryInterface(IID_PPV_ARGS(&m_device1));
+    m_hSharedInfo = OpenFileMappingW(FILE_MAP_ALL_ACCESS, FALSE, sharedInfoName);
     DWORD memErr = GetLastError();
+    DRV_LOG("OpenFileMappingW returned handle=0x%p, LastError=%d",
+        m_hSharedInfo, memErr);
+
+    HRESULT hr = device->QueryInterface(IID_PPV_ARGS(&m_device1));
+    memErr = GetLastError();
     DRV_LOG("QueryInterface returned hr=0x%p, LastError=%d",
         hr, memErr);
 
@@ -1089,6 +1088,7 @@ bool VideoBuffer::Initialize(
     memErr = GetLastError();
     DRV_LOG("OpenSharedResourceByName returned hr=0x%p, LastError=%d",
         hr, memErr);
+
     return true;
 }
 

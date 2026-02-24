@@ -181,13 +181,15 @@ bool  MonitorManager::WaitOpenDriver(DWORD intervalMs, DWORD maxTotalTimeMs)
 
 #pragma region Monitor
 
-Monitor::Monitor(const MonitorConfig& config, ID3D11Device* device, ID3D11DeviceContext* context):m_device(device),m_context(context) {
-    m_Config = config;
-    m_pBuffer = nullptr;
-    m_running = false;
-    m_threadFinished = false;
-    m_gDisplay = nullptr;
-}
+Monitor::Monitor(const MonitorConfig& config, ID3D11Device* device, ID3D11DeviceContext* context) :
+    m_device(device),
+    m_context(context),
+    m_Config(config),
+    m_pBuffer(nullptr),
+    m_gDisplay(nullptr),
+    m_running(false),
+    m_threadFinished(false)
+{}
 
 Monitor::~Monitor() {
     m_running = false;
@@ -215,9 +217,11 @@ bool Monitor::Initialize(const wchar_t* frameReadyName,
         return false;
     }
 
-    if (!CreateSharedTextures(sharedTextureName1, sharedTextureName2)) {
-        return false;
-    }
+    //m_pVideoBuffer = new VideoBuffer(m_Config.width, m_Config.height, m_Config.byteDepth);
+    //if (!m_pVideoBuffer->Initialize(m_device,frameReadyName,frameProcessedName,sharedMemoryName,sharedTextureName1,sharedTextureName2)) {
+    //    printf("m_pVideoBuffer->Initialize ERROR\n");
+    //    return false;
+    //}
 
     m_runThread = std::thread(&Monitor::Run, this);
     m_runThread.detach();
@@ -345,67 +349,6 @@ bool Monitor::CreateSharedBuffer(const wchar_t* frameReadyName, const wchar_t* f
     m_pBuffer = new DoubleBuffer();
 
     m_pBuffer->Initialize(hSharedMemory, hFrameReadyEvent, hFrameProcessedEvent, m_Config.width, m_Config.height, m_Config.byteDepth);
-
-    return true;
-}
-
-bool Monitor::CreateSharedTextures(const wchar_t* sharedTextureName1, const wchar_t* sharedTextureName2)
-{
-    SECURITY_DESCRIPTOR sd;
-    InitializeSecurityDescriptor(&sd, SECURITY_DESCRIPTOR_REVISION);
-    SetSecurityDescriptorDacl(&sd, TRUE, NULL, FALSE);  // NULL DACL = полный доступ всем
-
-    SECURITY_ATTRIBUTES sa;
-    sa.nLength = sizeof(SECURITY_ATTRIBUTES);
-    sa.lpSecurityDescriptor = &sd;
-    sa.bInheritHandle = FALSE;
-
-    if (!m_device) {
-        return false;
-    }
-
-    D3D11_TEXTURE2D_DESC desc = {};
-    
-    desc.Width = m_Config.width;
-    desc.Height = m_Config.height;
-    desc.MipLevels = 1;
-    desc.ArraySize = 1;
-    desc.Format = DXGI_FORMAT_B8G8R8A8_UNORM; // или нужный формат
-    desc.SampleDesc.Count = 1;
-    desc.Usage = D3D11_USAGE_DEFAULT;
-    desc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET;
-    desc.MiscFlags = D3D11_RESOURCE_MISC_SHARED_NTHANDLE |   D3D11_RESOURCE_MISC_SHARED_KEYEDMUTEX;
-
-    Microsoft::WRL::ComPtr<ID3D11Texture2D> texture1, texture2;
-    HRESULT hr = m_device->CreateTexture2D(&desc, nullptr, &texture1);
-    hr = m_device->CreateTexture2D(&desc, nullptr, &texture2);
-
-    // Получаем интерфейсы IDXGIResource1 для создания именованных shared-ресурсов
-    Microsoft::WRL::ComPtr<IDXGIResource1> resource1, resource2;
-    texture1.As(&resource1);
-    texture2.As(&resource2);
-
-    HANDLE handle0 = nullptr, handle1 = nullptr;
-
-    hr = resource1->CreateSharedHandle(&sa,
-        DXGI_SHARED_RESOURCE_READ | DXGI_SHARED_RESOURCE_WRITE,
-        sharedTextureName1, &handle0);
-    if (FAILED(hr)) {
-        printf("CreateSharedHandle failed for texture1, hr=0x%08X", hr);
-        return false;
-    }
-    hr = resource2->CreateSharedHandle(&sa,
-        DXGI_SHARED_RESOURCE_READ | DXGI_SHARED_RESOURCE_WRITE,
-        sharedTextureName2, &handle1);
-    if (FAILED(hr)) {
-        printf("CreateSharedHandle failed for texture2, hr=0x%08X", hr);
-        CloseHandle(handle0); // не забыть закрыть уже открытый handle
-        return false;
-    }
-
-    //// Локальные HANDLE можно закрыть — ресурс теперь живёт по имени
-    //CloseHandle(handle0);
-    //CloseHandle(handle1);
 
     return true;
 }

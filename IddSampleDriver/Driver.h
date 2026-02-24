@@ -112,8 +112,6 @@ namespace Microsoft
 
             bool OpenSharedBuffer();
 
-            bool OpenSharedTextures(Direct3DDevice* pD3DDevice);
-
             IDDCX_MONITOR GetMonitorHandle() const;
             MonitorConfig GetMonitorConfig() const;
 
@@ -132,7 +130,7 @@ namespace Microsoft
             
             std::unique_ptr<SwapChainProcessor> m_ProcessingThread;
             DoubleBuffer* m_pBuffer;
-            VideoBuffer* m_pVideo;
+            VideoBuffer* m_pVideoBuffer;
         };
 
         class IndirectDeviceContext

@@ -19,6 +19,7 @@
 
 #include "../Common.h"
 #include "../DoubleBuffer.h"
+#include "../VideoBuffer.h"
 #include "GpuDisplay.h"
 #include "VideoDisplay.h"
 
@@ -44,7 +45,6 @@ public:
     
 private:
     bool CreateSharedBuffer(const wchar_t* frameReadyName, const wchar_t* frameProcessedName, const wchar_t* sharedMemoryName);
-    bool CreateSharedTextures(const wchar_t* sharedTextureName1, const wchar_t* sharedTextureName2);
 
     //VideoDisplay* m_windowDisplay;
     GpuDisplay* m_gDisplay;
@@ -53,6 +53,7 @@ private:
 
     MonitorConfig m_Config;
     DoubleBuffer* m_pBuffer;
+    VideoBuffer* m_pVideoBuffer;
 
     std::thread m_runThread;
     bool m_running;
