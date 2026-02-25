@@ -212,7 +212,7 @@ bool Monitor::Initialize(const wchar_t* frameReadyName,
                          const wchar_t* sharedTextureName2)
 {
 
-    //m_gDisplay = new GpuDisplay(m_Config.width, m_Config.height, m_device.Get(), m_context.Get());
+    m_gDisplay = new GpuDisplay(m_Config.width, m_Config.height, m_device.Get(), m_context.Get());
 
     //if (!CreateSharedBuffer(frameReadyName, frameProcessedName, sharedMemoryName)) {
     //    return false;
@@ -231,23 +231,19 @@ bool Monitor::Initialize(const wchar_t* frameReadyName,
 }
 
 void Monitor::Run() {
-    //VideoDisplay* vidDisplay = new VideoDisplay(m_Config.width,m_Config.height);
-    TestDisplay* testDisplay = new TestDisplay(m_Config.width, m_Config.height,m_device.Get(), m_context.Get());
-    //if (m_gDisplay->Initialize()) {
-    //    m_running = true;
-    //}
-    //else {
-    //    std::cout << "Ошибка иницализации GpuDisplay" << std::endl;
-    //}
-    m_running = true;
+    if (m_gDisplay->Initialize()) {
+        m_running = true;
+    }
+    else {
+        std::cout << "Ошибка иницализации GpuDisplay" << std::endl;
+    }
+    //m_running = true;
     while (m_running)
     {
-        // Ждём, пока драйвер скажет: "новый кадр готов"
         DWORD waitResult = WaitForSingleObject(
             m_pVideoBuffer->GetFrameReadyEvent(),       // handle события
             50      // ждать бесконечно (или 5000 мс, например)
         );
-        
 
         if (!m_running) {
             break;
@@ -258,32 +254,24 @@ void Monitor::Run() {
         case WAIT_OBJECT_0:
         {
             ResetEvent(m_pVideoBuffer->GetFrameReadyEvent());
-
             auto frame = m_pVideoBuffer->GetLatestFrame();
-            //m_gDisplay->ShowFrame(frame.texture);
-            std::cout << "Новый" << std::endl;
-            testDisplay->ShowFrame(frame.texture);
-            std::cout << "Новый кадр" << std::endl;
-            std::cout << frame.frameId << '\n';
-            std::cout << frame.texture << '\n';
-            std::cout << frame.bufferIdx << '\n';
-            std::cout << frame.size << '\n';
-            std::cout << frame.width << '\n';
-            std::cout << frame.height << '\n';
-            std::cout << frame.byteDepth << '\n';
-
+            m_gDisplay->ShowFrame(frame.texture);
+            std::cout << "Новый кадр " << "id = " << frame.frameId <<"; idx = " << frame.bufferIdx << std::endl;
+   
             m_pVideoBuffer->MarkFrameProcessed();
+
+            if (!m_gDisplay->ProcessEvents())
+                m_running = false;
 
             break;
         }
 
         case WAIT_TIMEOUT:
         {
-            //testDisplay->ProcessEvents();
-            //if (!m_gDisplay->ProcessEvents()) 
-            //    m_running = false;
-            //vidDisplay->wait();
-            std::cout << "Таймаут ожидания кадра\n";
+            if (!m_gDisplay->ProcessEvents())
+                m_running = false;
+
+            //std::cout << "Таймаут ожидания кадра\n";
             break;
         }
 
@@ -297,7 +285,7 @@ void Monitor::Run() {
             break;
         }
     }
-    delete testDisplay;
+    delete m_gDisplay;
     m_threadFinished = true;
 }
 

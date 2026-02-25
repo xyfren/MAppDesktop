@@ -1,4 +1,5 @@
-#include "GpuDisplay.h"
+Ôªø#include "GpuDisplay.h"
+
 
 GpuDisplay::GpuDisplay(int width, int height, ID3D11Device* device, ID3D11DeviceContext* context)
     : m_width(width), m_height(height), m_window(nullptr), m_device(device), m_context(context)
@@ -14,30 +15,36 @@ GpuDisplay::~GpuDisplay()
 
 bool GpuDisplay::Initialize()
 {
-    // Create SDL window
     m_window = SDL_CreateWindow("Video Display", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
-        m_width, m_height, SDL_WINDOW_SHOWN);
+        m_width, m_height, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
     if (!m_window) return false;
 
-    // Get HWND
     SDL_SysWMinfo wmInfo;
     SDL_VERSION(&wmInfo.version);
     if (!SDL_GetWindowWMInfo(m_window, &wmInfo)) return false;
     HWND hwnd = wmInfo.info.win.window;
 
-    // Create swap chain
+    // 1. –ó–∞–ø—Ä–∞—à–∏–≤–∞–µ–º —Ç–µ–∫—É—â—É—é —á–∞—Å—Ç–æ—Ç—É –º–æ–Ω–∏—Ç–æ—Ä–∞ (—Ä–µ–∞–ª—å–Ω—É—é)
+    int displayIndex = SDL_GetWindowDisplayIndex(m_window);
+    SDL_DisplayMode mode;
+    SDL_GetCurrentDisplayMode(displayIndex, &mode);
+    int refreshRate = mode.refresh_rate; // –Ω–∞–ø—Ä–∏–º–µ—Ä 120
+
+    if (refreshRate <= 0) refreshRate = 120; // –∑–∞–ø–∞—Å–Ω–æ–π –≤–∞—Ä–∏–∞–Ω—Ç
+
     DXGI_SWAP_CHAIN_DESC scd = {};
-    scd.BufferCount = 2;
+    scd.BufferCount = 2;                   // –¥–≤–æ–π–Ω–∞—è –±—É—Ñ–µ—Ä–∏–∑–∞—Ü–∏—è
     scd.BufferDesc.Width = m_width;
     scd.BufferDesc.Height = m_height;
     scd.BufferDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
-    scd.BufferDesc.RefreshRate.Numerator = 60;
+    scd.BufferDesc.RefreshRate.Numerator = 120;
     scd.BufferDesc.RefreshRate.Denominator = 1;
     scd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
     scd.OutputWindow = hwnd;
     scd.SampleDesc.Count = 1;
     scd.Windowed = TRUE;
-    scd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
+    //scd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD; // –ª—É—á—à–µ –¥–ª—è –ø—Ä–æ–∏–∑–≤–æ–¥–∏—Ç–µ–ª—å–Ω–æ—Å—Ç–∏
+    scd.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
 
     Microsoft::WRL::ComPtr<IDXGIDevice> dxgiDevice;
     HRESULT hr = m_device.As(&dxgiDevice);
@@ -61,30 +68,45 @@ bool GpuDisplay::Initialize()
     return true;
 }
 
-bool GpuDisplay::ShowFrame(ID3D11Texture2D* frameTexture)
-{
+bool GpuDisplay::ShowFrame(ID3D11Texture2D* frameTexture) {
     if (!frameTexture || !m_context || !m_swapChain) {
-        printf("FAIL\n");
-        printf("0x%08X\n", m_context);
-        printf("0x%08X\n", m_swapChain);
-        printf("%d", frameTexture);
-        return false;
-    }
-    HRESULT hr = m_context->GetData(nullptr, nullptr, 0, 0); // ÔÛÒÚÓÈ Á‡ÔÓÒ ‰Îˇ ÔÓ‚ÂÍË
-    if (FAILED(hr)) {
-        OutputDebugStringA("GPU device removed or hung\n");
+        printf("Invalid parameters\n");
         return false;
     }
 
     m_context->CopyResource(m_backBuffer.Get(), frameTexture);
-
-    // œÓÔÓ·ÛÂÏ ·ÂÁ VSync ‰Îˇ ÚÂÒÚ‡
-    hr = m_swapChain->Present(0, 0); // 0 = ·ÂÁ ‚ÂÚËÍ‡Î¸ÌÓÈ ÒËÌıÓÌËÁ‡ˆËË
-
+    //m_context->Flush();
+    HRESULT hr = m_swapChain->Present(0, 0);
     if (FAILED(hr)) {
-        char buf[100];
-        sprintf_s(buf, "Present failed: 0x%08X\n", hr);
-        OutputDebugStringA(buf);
+        printf("Present failed: 0x%08X\n", hr);
+        return false;
+    }
+
+    return true;
+}
+
+bool GpuDisplay::ShowPinkTest() {
+    if (!m_context || !m_swapChain || !m_backBuffer) {
+        printf("GpuDisplay not initialized\n");
+        return false;
+    }
+
+    // –°–æ–∑–¥–∞—ë–º render target view –¥–ª—è back buffer
+    Microsoft::WRL::ComPtr<ID3D11RenderTargetView> rtv;
+    HRESULT hr = m_device->CreateRenderTargetView(m_backBuffer.Get(), nullptr, &rtv);
+    if (FAILED(hr)) {
+        printf("CreateRTV failed: 0x%08X\n", hr);
+        return false;
+    }
+
+    // –†–æ–∑–æ–≤—ã–π —Ü–≤–µ—Ç (RGBA)
+    float pink[4] = { 1.0f, 0.75f, 0.8f, 1.0f };
+    m_context->ClearRenderTargetView(rtv.Get(), pink);
+    m_context->Flush();
+
+    hr = m_swapChain->Present(0, 0);
+    if (FAILED(hr)) {
+        printf("Present failed: 0x%08X\n", hr);
         return false;
     }
 

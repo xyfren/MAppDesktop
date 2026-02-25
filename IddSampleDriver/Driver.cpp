@@ -1051,36 +1051,6 @@ bool VideoBuffer::Initialize(
 }
 
 void VideoBuffer::PushFrame(ID3D11Texture2D* sourceTexture, ID3D11DeviceContext* pContext, uint64_t frameId, uint64_t timestamp) {
-    D3D11_TEXTURE2D_DESC desk2 = {};
-    sourceTexture->GetDesc(&desk2);
-
-    D3D11_TEXTURE2D_DESC desk3 = {};
-    m_texture1->GetDesc(&desk3);
-
-    DRV_LOG("SRC Width %u", desk2.Width);
-    DRV_LOG("SRC Height %u", desk2.Height);
-    DRV_LOG("SRC Format %u", desk2.Format);
-    DRV_LOG("SRC MipLevels %u", desk2.MipLevels);
-    DRV_LOG("SRC ArraySize %u", desk2.ArraySize);
-    DRV_LOG("SRC SampleDesc.Count %u", desk2.SampleDesc.Count);
-    DRV_LOG("SRC SampleDesc.Quality %u", desk2.SampleDesc.Quality);
-    DRV_LOG("SRC Usage %u", desk2.Usage);
-    DRV_LOG("SRC BindFlags %u", desk2.BindFlags);
-    DRV_LOG("SRC CPUAccessFlags %u", desk2.CPUAccessFlags);
-    DRV_LOG("SRC MiscFlags %u", desk2.MiscFlags);
-
-    DRV_LOG("SRC Width %u", desk3.Width);
-    DRV_LOG("SRC Height %u", desk3.Height);
-    DRV_LOG("SRC Format %u", desk3.Format);
-    DRV_LOG("SRC MipLevels %u", desk3.MipLevels);
-    DRV_LOG("SRC ArraySize %u", desk3.ArraySize);
-    DRV_LOG("SRC SampleDesc.Count %u", desk3.SampleDesc.Count);
-    DRV_LOG("SRC SampleDesc.Quality %u", desk3.SampleDesc.Quality);
-    DRV_LOG("SRC Usage %u", desk3.Usage);
-    DRV_LOG("SRC BindFlags %u", desk3.BindFlags);
-    DRV_LOG("SRC CPUAccessFlags %u", desk3.CPUAccessFlags);
-    DRV_LOG("SRC MiscFlags %u", desk3.MiscFlags);
-
     FrameHeader* header = (FrameHeader*)m_pMappedBuffer;
 
     uint16_t writeBuffer = header->freshBufferIdx ^ 1;
@@ -1115,60 +1085,15 @@ void VideoBuffer::PushFrame(ID3D11Texture2D* sourceTexture, ID3D11DeviceContext*
 
     if (writeBuffer == 0) {
         m_context->CopyResource(m_texture1.Get(), sourceTexture);
-        //DRV_LOG("m_texture1 0x%p,", m_texture1.Get());
     }
     else {
         m_context->CopyResource(m_texture2.Get(), sourceTexture);
-        //DRV_LOG("m_texture2 0x%p,", m_texture2.Get());
-    }
-    pContext->Flush();
-
-    // ======= ВЫВОД ПИКСЕЛЯ ИСХОДНОЙ ТЕКСТУРЫ =======
-                // Получаем описание текстуры
-    D3D11_TEXTURE2D_DESC desc;
-    m_texture1->GetDesc(&desc);
-
-    // СОЗДАЕМ STAGING ТЕКСТУРУ для копирования
-    D3D11_TEXTURE2D_DESC stagingDesc = {};
-    stagingDesc.Width = desc.Width;
-    stagingDesc.Height = desc.Height;
-    stagingDesc.MipLevels = 1;
-    stagingDesc.ArraySize = 1;
-    stagingDesc.Format = desc.Format;
-    stagingDesc.SampleDesc.Count = 1;
-    stagingDesc.Usage = D3D11_USAGE_STAGING;
-    stagingDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
-    enum fsdfsdf { MOONDAY, THOUSDAY };
-    ComPtr<ID3D11Texture2D> staging;
-    HRESULT hrStaging = m_device1->CreateTexture2D(&stagingDesc, nullptr, &staging);
-    if (SUCCEEDED(hrStaging))
-    {
-        m_context->CopyResource(staging.Get(), m_texture1.Get());
-        m_context->Flush();
-
-        D3D11_MAPPED_SUBRESOURCE mapped = {};
-        hrStaging = m_context->Map(staging.Get(), 0, D3D11_MAP_READ, 0, &mapped);
-        if (SUCCEEDED(hrStaging))
-        {
-            uint8_t* data = (uint8_t*)mapped.pData;
-            uint8_t B = data[0];
-            uint8_t G = data[1];
-            uint8_t R = data[2];
-            uint8_t A = data[3];
-
-            DRV_LOG("Исходная текстура первый пиксель (BGRA): %d %d %d %d\n",
-                B, G, R, A);
-
-            m_context->Unmap(staging.Get(), 0);
-        }
     }
 
-    // Обновляем метаданные
     header->frameId = frameId;
     header->timestamp = timestamp;
-    header->freshBufferIdx = writeBuffer; // теперь свежий буфер — записанный
+    header->freshBufferIdx = writeBuffer;
 
-    // Сигналим приложению
     SetEvent(m_hFrameReadyEvent);
 }
 
