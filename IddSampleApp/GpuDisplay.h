@@ -11,7 +11,6 @@ public:
 
     bool Initialize();
     bool ShowFrame(ID3D11Texture2D* frameTexture);
-    bool ShowPinkTest();
     bool ProcessEvents(); // returns false if quit requested
 
 private:

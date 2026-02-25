@@ -18,15 +18,8 @@
 #pragma comment(lib, "d3d11.lib")
 
 #include "../Common.h"
-#include "../DoubleBuffer.h"
 #include "../VideoBuffer.h"
 #include "GpuDisplay.h"
-#include "VideoDisplay.h"
-#include "TestDisplay.h"
-
-#include <memory>
-
-
 
 class Monitor {
     
@@ -45,15 +38,11 @@ public:
     std::thread& GetThread();
     
 private:
-    bool CreateSharedBuffer(const wchar_t* frameReadyName, const wchar_t* frameProcessedName, const wchar_t* sharedMemoryName);
-
-    //VideoDisplay* m_windowDisplay;
     GpuDisplay* m_gDisplay;
     Microsoft::WRL::ComPtr<ID3D11Device> m_device;
     Microsoft::WRL::ComPtr<ID3D11DeviceContext> m_context;
 
     MonitorConfig m_Config;
-    DoubleBuffer* m_pBuffer;
     VideoBuffer* m_pVideoBuffer;
 
     std::thread m_runThread;

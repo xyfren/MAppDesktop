@@ -4,6 +4,7 @@
 #pragma region MonitorManager
 
 MonitorManager::MonitorManager() {
+    m_hDriverDevice = nullptr;
 }
 
 bool MonitorManager::Initialize() {
@@ -28,7 +29,6 @@ bool MonitorManager::Initialize() {
 }
 
 bool MonitorManager::ConnectToDriver() {
-    // Открываем устройство драйвера
     return WaitOpenDriver(200, 10000);
 }
 
@@ -185,7 +185,6 @@ Monitor::Monitor(const MonitorConfig& config, ID3D11Device* device, ID3D11Device
     m_device(device),
     m_context(context),
     m_Config(config),
-    m_pBuffer(nullptr),
     m_pVideoBuffer(nullptr),
     m_gDisplay(nullptr),
     m_running(false),
@@ -194,14 +193,13 @@ Monitor::Monitor(const MonitorConfig& config, ID3D11Device* device, ID3D11Device
 
 Monitor::~Monitor() {
     m_running = false;
-    // если поток может ждать событие, разбудите его (например, через событие остановки)
 
     while (!m_threadFinished) {
         std::this_thread::sleep_for(std::chrono::milliseconds(50)); // не жёсткий busy wait
     }
 
-    if (m_pBuffer) {
-        m_pBuffer->Cleanup();
+    if (m_pVideoBuffer) {
+        delete m_pVideoBuffer;
     }
 }
 
@@ -213,10 +211,6 @@ bool Monitor::Initialize(const wchar_t* frameReadyName,
 {
 
     m_gDisplay = new GpuDisplay(m_Config.width, m_Config.height, m_device.Get(), m_context.Get());
-
-    //if (!CreateSharedBuffer(frameReadyName, frameProcessedName, sharedMemoryName)) {
-    //    return false;
-    //}
 
     m_pVideoBuffer = new VideoBuffer(m_Config.width, m_Config.height, m_Config.byteDepth);
     if (!m_pVideoBuffer->Initialize(m_device,frameReadyName,frameProcessedName,sharedMemoryName,sharedTextureName1,sharedTextureName2)) {
@@ -237,12 +231,11 @@ void Monitor::Run() {
     else {
         std::cout << "Ошибка иницализации GpuDisplay" << std::endl;
     }
-    //m_running = true;
     while (m_running)
     {
         DWORD waitResult = WaitForSingleObject(
-            m_pVideoBuffer->GetFrameReadyEvent(),       // handle события
-            50      // ждать бесконечно (или 5000 мс, например)
+            m_pVideoBuffer->GetFrameReadyEvent(),
+            50
         );
 
         if (!m_running) {
@@ -256,7 +249,7 @@ void Monitor::Run() {
             ResetEvent(m_pVideoBuffer->GetFrameReadyEvent());
             auto frame = m_pVideoBuffer->GetLatestFrame();
             m_gDisplay->ShowFrame(frame.texture);
-            std::cout << "Новый кадр " << "id = " << frame.frameId <<"; idx = " << frame.bufferIdx << std::endl;
+            //std::cout << "Новый кадр " << "id = " << frame.frameId <<"; idx = " << frame.bufferIdx << std::endl;
    
             m_pVideoBuffer->MarkFrameProcessed();
 
@@ -271,7 +264,7 @@ void Monitor::Run() {
             if (!m_gDisplay->ProcessEvents())
                 m_running = false;
 
-            //std::cout << "Таймаут ожидания кадра\n";
+            //std::cout << "Таймаут ожидания кадра" << std::endl;
             break;
         }
 
@@ -291,59 +284,6 @@ void Monitor::Run() {
 
 std::thread& Monitor::GetThread() {
     return m_runThread;
-}
-
-bool Monitor::CreateSharedBuffer(const wchar_t* frameReadyName, const wchar_t* frameProcessedName, const wchar_t* sharedMemoryName)
-
-{
-    SECURITY_DESCRIPTOR sd;
-    InitializeSecurityDescriptor(&sd, SECURITY_DESCRIPTOR_REVISION);
-    SetSecurityDescriptorDacl(&sd, TRUE, NULL, FALSE);  // NULL DACL = полный доступ всем
-
-    SECURITY_ATTRIBUTES sa;
-    sa.nLength = sizeof(SECURITY_ATTRIBUTES);
-    sa.lpSecurityDescriptor = &sd;
-    sa.bInheritHandle = FALSE;
-
-    HANDLE hFrameReadyEvent = CreateEventW(
-        &sa,               // lpSecurityAttributes (по умолчанию)
-        TRUE,               // bManualReset = TRUE → manual reset (нужно ResetEvent)
-        FALSE,              // bInitialState = FALSE → изначально несигнализировано
-        frameReadyName   // имя (можно без имени — NULL, тогда анонимное)
-    );
-
-    HANDLE hFrameProcessedEvent = CreateEventW(
-        &sa,
-        TRUE,
-        FALSE,
-        frameProcessedName
-    );
-
-    if (!hFrameReadyEvent || !hFrameProcessedEvent)
-    {
-        std::cerr << "Не удалось создать события\n";
-        return false;
-    }
-    std::cout << "События созданы успешно\n";
-
-    HANDLE hSharedMemory = CreateFileMappingW(
-        INVALID_HANDLE_VALUE,       // используем paging file
-        &sa,                       // атрибуты по умолчанию
-        PAGE_READWRITE,             // чтение + запись
-        0,                          // старшие 32 бита размера
-        m_Config.width * m_Config.height * m_Config.byteDepth * 2 + sizeof(DoubleBuffer::FrameHeader),
-        sharedMemoryName
-    );
-
-    if (!hSharedMemory) {
-        return false;
-    }
-
-    m_pBuffer = new DoubleBuffer();
-
-    m_pBuffer->Initialize(hSharedMemory, hFrameReadyEvent, hFrameProcessedEvent, m_Config.width, m_Config.height, m_Config.byteDepth);
-
-    return true;
 }
 
 #pragma endregion

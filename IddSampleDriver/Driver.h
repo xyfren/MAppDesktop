@@ -21,7 +21,6 @@
 #include "Trace.h"
 #include "../Common.h"
 #include "Tools.h"
-#include "../DoubleBuffer.h"
 #include "../VideoBuffer.h"
 
 
@@ -80,7 +79,7 @@ namespace Microsoft
         class SwapChainProcessor
         {
         public:
-            SwapChainProcessor(IDDCX_SWAPCHAIN hSwapChain, std::shared_ptr<Direct3DDevice> Device, HANDLE NewFrameEvent, DoubleBuffer* pBuffer,VideoBuffer* pVideoBuffer);
+            SwapChainProcessor(IDDCX_SWAPCHAIN hSwapChain, std::shared_ptr<Direct3DDevice> Device, HANDLE NewFrameEvent, VideoBuffer* pVideoBuffer);
             ~SwapChainProcessor();
 
             Direct3DDevice* GetD3DDevice();
@@ -97,7 +96,6 @@ namespace Microsoft
             Microsoft::WRL::Wrappers::Thread m_hThread;
             Microsoft::WRL::Wrappers::Event m_hTerminateEvent;
 
-            DoubleBuffer* m_pBuffer;
             VideoBuffer* m_pVideoBuffer;
             uint64_t m_frameCounter;
         };
@@ -110,8 +108,6 @@ namespace Microsoft
         public:
             IndirectMonitorContext(_In_ IDDCX_MONITOR Monitor,_In_ CreateMonitorRequest* pRequest);
             virtual ~IndirectMonitorContext();
-
-            bool OpenSharedBuffer();
 
             IDDCX_MONITOR GetMonitorHandle() const;
             MonitorConfig GetMonitorConfig() const;
@@ -130,7 +126,6 @@ namespace Microsoft
             std::wstring m_sharedTextureName2;
             
             std::unique_ptr<SwapChainProcessor> m_ProcessingThread;
-            DoubleBuffer* m_pBuffer;
             VideoBuffer* m_pVideoBuffer;
         };
 

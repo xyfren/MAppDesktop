@@ -127,6 +127,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <TreatWarningAsError>false</TreatWarningAsError>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -137,22 +138,16 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="DoubleBuffer.cpp" />
     <ClCompile Include="GpuDisplay.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MonitorManager.cpp" />
-    <ClCompile Include="TestDisplay.cpp" />
     <ClCompile Include="VideoBuffer.cpp" />
-    <ClCompile Include="VideoDisplay.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Common.h" />
-    <ClInclude Include="..\DoubleBuffer.h" />
     <ClInclude Include="..\VideoBuffer.h" />
     <ClInclude Include="GpuDisplay.h" />
     <ClInclude Include="MonitorManager.h" />
-    <ClInclude Include="TestDisplay.h" />
-    <ClInclude Include="VideoDisplay.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\IddSampleDriver\IddSampleDriver.vcxproj">

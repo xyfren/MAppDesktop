@@ -370,8 +370,8 @@ HRESULT Direct3DDevice::Init()
 
 #pragma region SwapChainProcessor
 
-SwapChainProcessor::SwapChainProcessor(IDDCX_SWAPCHAIN hSwapChain, shared_ptr<Direct3DDevice> Device, HANDLE NewFrameEvent, DoubleBuffer* pBuffer,VideoBuffer* pVideoBuffer)
-    : m_hSwapChain(hSwapChain), m_Device(Device), m_hAvailableBufferEvent(NewFrameEvent), m_pBuffer(pBuffer), m_pVideoBuffer(pVideoBuffer)
+SwapChainProcessor::SwapChainProcessor(IDDCX_SWAPCHAIN hSwapChain, shared_ptr<Direct3DDevice> Device, HANDLE NewFrameEvent, VideoBuffer* pVideoBuffer)
+    : m_hSwapChain(hSwapChain), m_Device(Device), m_hAvailableBufferEvent(NewFrameEvent), m_pVideoBuffer(pVideoBuffer)
 {
     m_hTerminateEvent.Attach(CreateEvent(nullptr, FALSE, FALSE, nullptr));
     m_frameCounter = 0;
@@ -389,6 +389,8 @@ SwapChainProcessor::~SwapChainProcessor()
         // Wait for the thread to terminate
         WaitForSingleObject(m_hThread.Get(), INFINITE);
     }
+    if (m_pVideoBuffer)
+        delete m_pVideoBuffer;
 }
 
 Direct3DDevice* SwapChainProcessor::GetD3DDevice() {
@@ -756,7 +758,6 @@ IndirectMonitorContext::IndirectMonitorContext(_In_ IDDCX_MONITOR Monitor, _In_ 
     m_sharedTextureName1 = pRequest->sharedTextureName1;
     m_sharedTextureName2 = pRequest->sharedTextureName2;
 
-    m_pBuffer = nullptr;
     m_pVideoBuffer = nullptr;
 
 }
@@ -764,33 +765,8 @@ IndirectMonitorContext::IndirectMonitorContext(_In_ IDDCX_MONITOR Monitor, _In_ 
 IndirectMonitorContext::~IndirectMonitorContext()
 {
     m_ProcessingThread.reset();
-}
-
-bool IndirectMonitorContext::OpenSharedBuffer()
-{
-    // Open shared memory
-    HANDLE hSharedMemory = OpenFileMappingW(FILE_MAP_ALL_ACCESS, FALSE, m_sharedMemoryName.c_str());
-
-    DWORD memErr = GetLastError();
-    DRV_LOG("OpenFileMappingW returned handle=0x%p, LastError=%d",
-        hSharedMemory, memErr);
-
-    HANDLE hFrameReadyEvent = OpenEventW(EVENT_ALL_ACCESS, FALSE, m_frameReadyName.c_str());
-
-    HANDLE hFrameProcessedEvent = OpenEventW(EVENT_ALL_ACCESS, FALSE, m_frameProcessedName.c_str());
-
-    m_pBuffer= new DoubleBuffer();
-
-    if (!m_pBuffer->Initialize(hSharedMemory,
-        hFrameReadyEvent, hFrameProcessedEvent,
-        m_Config.width, m_Config.height, m_Config.byteDepth)) {
-        DRV_LOG("BufferInit FAILED");
-        DRV_LOG(std::to_string((unsigned long)GetLastError()).c_str());
-        DRV_LOGW(m_sharedMemoryName.c_str());
-        DRV_LOGW(m_frameReadyName.c_str());
-        DRV_LOGW(m_frameProcessedName.c_str());
-    }
-    return true;
+    if (m_pVideoBuffer)
+        delete m_pVideoBuffer;
 }
 
 IDDCX_MONITOR IndirectMonitorContext::GetMonitorHandle() const
@@ -816,152 +792,22 @@ void IndirectMonitorContext::AssignSwapChain(IDDCX_SWAPCHAIN SwapChain, LUID Ren
     }
     else
     {
-        // Create a new swap-chain processing thread
-        //if (!OpenSharedBuffer()) {
-        //    DRV_LOG("OpenSharedBuffer error");
-        //    return;
-        //}
         m_pVideoBuffer = new VideoBuffer(m_Config.width, m_Config.height, m_Config.byteDepth);
         if (!m_pVideoBuffer->Initialize(Device->Device,m_frameReadyName.c_str(),m_frameProcessedName.c_str(),m_sharedMemoryName.c_str(),m_sharedTextureName1.c_str(),m_sharedTextureName2.c_str())) {
-            DRV_LOG("m_pVideoBuffer->Initializ error");
+            DRV_LOG("m_pVideoBuffer->Initialize error");
             return ;
         }
-        m_ProcessingThread.reset(new SwapChainProcessor(SwapChain, Device, NewFrameEvent,m_pBuffer,m_pVideoBuffer));
+        m_ProcessingThread.reset(new SwapChainProcessor(SwapChain, Device, NewFrameEvent,m_pVideoBuffer));
     }
 }
 
 void IndirectMonitorContext::UnassignSwapChain()
 {
+    DRV_LOG("UnassignSwapChain");
     // Stop processing the last swap-chain
     m_ProcessingThread.reset();
-}
-
-#pragma endregion
-
-#pragma region DoubleBuffer
-
-bool DoubleBuffer::Initialize(HANDLE hSharedMemory,
-    HANDLE hFrameReadyEvent, // Драйвер -> Приложение: "новый кадр готов"
-    HANDLE hFrameProcessedEvent, // Приложение -> Драйвер: "кадр обработан"
-    uint16_t width,
-    uint16_t height,
-    uint16_t byteDepth)
-{
-
-    m_hSharedMemory = hSharedMemory;
-    m_hFrameReadyEvent = hFrameReadyEvent;
-    m_hFrameProcessedEvent = hFrameProcessedEvent;
-
-    m_pMappedBuffer = MapViewOfFile(m_hSharedMemory, FILE_MAP_ALL_ACCESS, 0, 0, 0);
-    if (!m_pMappedBuffer) return false;
-
-    m_width = width;
-    m_height = height;
-    m_byteDepth = byteDepth;
-    m_frameSize = width * height * byteDepth;
-    m_headerSize = sizeof(FrameHeader);
-    m_buffer0_offset = m_headerSize;
-    m_buffer1_offset = m_headerSize + m_frameSize;
-
-    FrameHeader* header = (FrameHeader*)m_pMappedBuffer;
-    header->width = width;
-    header->height = height;
-    header->byteDepth = byteDepth;
-    header->format = 87;
-    header->frameSize = m_frameSize;
-    header->bufferIndex = 0;
-    header->bufferProccesed[0] = false;
-    header->bufferProccesed[1] = false;
-    DRV_LOG("BufferInitSucc");
-    return true;
-}
-
-void DoubleBuffer::PushFrame(ID3D11Texture2D* pTexture, ID3D11DeviceContext* pContext, uint64_t frameId, uint64_t timestamp)
-{
-    if (!m_pMappedBuffer || !pTexture || !pContext) return;
-
-    FrameHeader* header = (FrameHeader*)m_pMappedBuffer;
-
-    uint32_t currentOffset = (header->bufferIndex == 0) ? m_buffer1_offset : m_buffer0_offset;
-
-    D3D11_MAPPED_SUBRESOURCE mapped;
-
-    HRESULT hr = pContext->Map(pTexture, 0, D3D11_MAP_READ, 0, &mapped);
-
-    if (SUCCEEDED(hr)) {     
-        uint16_t pitch = m_width * m_byteDepth;
-
-        uint8_t* dst = (uint8_t*)m_pMappedBuffer + currentOffset;
-        uint8_t* src = (uint8_t*)mapped.pData;
-
-        if (mapped.RowPitch == pitch) {
-            memcpy(dst, src, m_frameSize);
-        }
-        else {
-            for (UINT y = 0; y < m_height; y++) {
-                memcpy(dst + y * pitch, src + y * mapped.RowPitch, pitch);
-            }
-        }
-
-        pContext->Unmap(pTexture, 0);
-
-        header->frameId = frameId;
-        header->timestamp = timestamp;
-        header->bufferIndex ^= 1;
-
-        SetEvent(m_hFrameReadyEvent);
-    }
-    else {
-        DRV_LOG("Error 0x%08X", hr);
-    }
-}
-
-DoubleBuffer::Frame DoubleBuffer::GetLatestFrame()
-{
-    FrameHeader* header = (FrameHeader*)m_pMappedBuffer;
-    
-    //Choose last buffer
-    uint32_t readOffset = (header->bufferIndex == 0) ? m_buffer0_offset : m_buffer1_offset;
-
-    return Frame{
-        (uint8_t*)m_pMappedBuffer + readOffset,
-        header->frameSize,
-        header->frameId,
-        header->timestamp,
-        header->width,
-        header->height,
-        header->bufferIndex
-    };
-}
-
-void DoubleBuffer::MarkFrameProcessed(uint16_t bufferIndex)
-{
-    FrameHeader* header = (FrameHeader*)m_pMappedBuffer;
-    header->bufferProccesed[bufferIndex] = true; 
-    SetEvent(m_hFrameProcessedEvent);
-}
-
-HANDLE DoubleBuffer::GetFrameProcessedEvent() const
-{
-    return m_hFrameProcessedEvent;
-}
-
-HANDLE DoubleBuffer::GetFrameReadyEvent() const
-{
-    return m_hFrameReadyEvent;
-}
-
-void DoubleBuffer::Cleanup()
-{
-    if (m_pMappedBuffer) UnmapViewOfFile(m_pMappedBuffer);
-    if (m_hSharedMemory) CloseHandle(m_hSharedMemory);
-    if (m_hFrameReadyEvent) CloseHandle(m_hFrameReadyEvent);
-    if (m_hFrameProcessedEvent) CloseHandle(m_hFrameProcessedEvent);
-
-    m_pMappedBuffer = nullptr;
-    m_hSharedMemory = nullptr;
-    m_hFrameReadyEvent = nullptr;
-    m_hFrameProcessedEvent = nullptr;
+    if (m_pVideoBuffer)
+        delete m_pVideoBuffer;
 }
 
 #pragma endregion
@@ -975,6 +821,7 @@ VideoBuffer::VideoBuffer(uint16_t width, uint16_t height, uint16_t byteDepth) {
 }
 
 VideoBuffer::~VideoBuffer() {
+    DRV_LOG("Buffer deleted");
     Cleanup();
 }
 
@@ -1061,7 +908,7 @@ void VideoBuffer::PushFrame(ID3D11Texture2D* sourceTexture, ID3D11DeviceContext*
     else {
         DWORD waitResult = WaitForSingleObject(
             m_hFrameProcessedEvent,       
-            INFINITE);
+            1000);
         switch (waitResult)
         {
         case WAIT_OBJECT_0:

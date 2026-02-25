@@ -85,42 +85,14 @@ bool GpuDisplay::ShowFrame(ID3D11Texture2D* frameTexture) {
     return true;
 }
 
-bool GpuDisplay::ShowPinkTest() {
-    if (!m_context || !m_swapChain || !m_backBuffer) {
-        printf("GpuDisplay not initialized\n");
-        return false;
-    }
-
-    // Создаём render target view для back buffer
-    Microsoft::WRL::ComPtr<ID3D11RenderTargetView> rtv;
-    HRESULT hr = m_device->CreateRenderTargetView(m_backBuffer.Get(), nullptr, &rtv);
-    if (FAILED(hr)) {
-        printf("CreateRTV failed: 0x%08X\n", hr);
-        return false;
-    }
-
-    // Розовый цвет (RGBA)
-    float pink[4] = { 1.0f, 0.75f, 0.8f, 1.0f };
-    m_context->ClearRenderTargetView(rtv.Get(), pink);
-    m_context->Flush();
-
-    hr = m_swapChain->Present(0, 0);
-    if (FAILED(hr)) {
-        printf("Present failed: 0x%08X\n", hr);
-        return false;
-    }
-
-    return true;
-}
-
 bool GpuDisplay::ProcessEvents()
 {
+    // Handle window events
     SDL_Event e;
     while (SDL_PollEvent(&e)) {
         if (e.type == SDL_QUIT) {
             return false;
         }
-        // Handle window resize if needed (would require recreating swap chain)
     }
     return true;
 }
