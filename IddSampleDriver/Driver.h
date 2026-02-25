@@ -80,7 +80,7 @@ namespace Microsoft
         class SwapChainProcessor
         {
         public:
-            SwapChainProcessor(IDDCX_SWAPCHAIN hSwapChain, std::shared_ptr<Direct3DDevice> Device, HANDLE NewFrameEvent, DoubleBuffer* pBuffer);
+            SwapChainProcessor(IDDCX_SWAPCHAIN hSwapChain, std::shared_ptr<Direct3DDevice> Device, HANDLE NewFrameEvent, DoubleBuffer* pBuffer,VideoBuffer* pVideoBuffer);
             ~SwapChainProcessor();
 
             Direct3DDevice* GetD3DDevice();
@@ -98,6 +98,7 @@ namespace Microsoft
             Microsoft::WRL::Wrappers::Event m_hTerminateEvent;
 
             DoubleBuffer* m_pBuffer;
+            VideoBuffer* m_pVideoBuffer;
             uint64_t m_frameCounter;
         };
 

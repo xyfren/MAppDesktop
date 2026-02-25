@@ -370,10 +370,9 @@ HRESULT Direct3DDevice::Init()
 
 #pragma region SwapChainProcessor
 
-SwapChainProcessor::SwapChainProcessor(IDDCX_SWAPCHAIN hSwapChain, shared_ptr<Direct3DDevice> Device, HANDLE NewFrameEvent, DoubleBuffer* pBuffer)
-    : m_hSwapChain(hSwapChain), m_Device(Device), m_hAvailableBufferEvent(NewFrameEvent), m_pBuffer(pBuffer)
+SwapChainProcessor::SwapChainProcessor(IDDCX_SWAPCHAIN hSwapChain, shared_ptr<Direct3DDevice> Device, HANDLE NewFrameEvent, DoubleBuffer* pBuffer,VideoBuffer* pVideoBuffer)
+    : m_hSwapChain(hSwapChain), m_Device(Device), m_hAvailableBufferEvent(NewFrameEvent), m_pBuffer(pBuffer), m_pVideoBuffer(pVideoBuffer)
 {
-
     m_hTerminateEvent.Attach(CreateEvent(nullptr, FALSE, FALSE, nullptr));
     m_frameCounter = 0;
     // Immediately create and run the swap-chain processing thread, passing 'this' as the thread parameter
@@ -479,10 +478,13 @@ void SwapChainProcessor::RunCore()
         {
             // We have new frame to process, the surface has a reference on it that the driver has to release
             AcquiredBuffer.Attach(Buffer.MetaData.pSurface);
+
             ComPtr<ID3D11Texture2D> texture;
             HRESULT hrTexture = AcquiredBuffer.As(&texture);
-            if (SUCCEEDED(hrTexture) && m_pBuffer)
+            
+            if (SUCCEEDED(hrTexture) && m_pVideoBuffer)
             {
+                // ======= ВЫВОД ПИКСЕЛЯ ИСХОДНОЙ ТЕКСТУРЫ =======
                 // Получаем описание текстуры
                 D3D11_TEXTURE2D_DESC desc;
                 texture->GetDesc(&desc);
@@ -498,22 +500,40 @@ void SwapChainProcessor::RunCore()
                 stagingDesc.Usage = D3D11_USAGE_STAGING;
                 stagingDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
 
-                ComPtr<ID3D11Texture2D> stagingTexture;
-                hr = m_Device->Device->CreateTexture2D(&stagingDesc, nullptr, &stagingTexture);
-                if (SUCCEEDED(hr))
+                ComPtr<ID3D11Texture2D> staging;
+                HRESULT hrStaging = m_Device->Device->CreateTexture2D(&stagingDesc, nullptr, &staging);
+                if (SUCCEEDED(hrStaging))
                 {
-                    // Копируем в staging текстуру
-                    m_Device->DeviceContext->CopyResource(stagingTexture.Get(), texture.Get());
+                    m_Device->DeviceContext->CopyResource(staging.Get(), texture.Get());
+                    m_Device->DeviceContext->Flush();
 
-                    // Отправляем staging текстуру в буфер
-                    m_pBuffer->PushFrame(
-                        stagingTexture.Get(),
-                        m_Device->DeviceContext.Get(),
-                        m_frameCounter++,
-                        __rdtsc()
-                    );
+                    D3D11_MAPPED_SUBRESOURCE mapped = {};
+                    hrStaging = m_Device->DeviceContext->Map(staging.Get(), 0, D3D11_MAP_READ, 0, &mapped);
+                    if (SUCCEEDED(hrStaging))
+                    {
+                        uint8_t* data = (uint8_t*)mapped.pData;
+                        uint8_t B = data[0];
+                        uint8_t G = data[1];
+                        uint8_t R = data[2];
+                        uint8_t A = data[3];
+
+                        DRV_LOG("Исходная текстура первый пиксель (BGRA): %d %d %d %d\n",
+                            B, G, R, A);
+
+                        m_Device->DeviceContext->Unmap(staging.Get(), 0);
+                    }
                 }
+                // Отправляем текстуру в VideoBuffer для копирования и синхронизации
+                // frameId можно увеличивать с каждым кадром, timestamp - например, QueryPerformanceCounter или __rdtsc
+                m_pVideoBuffer->PushFrame(
+                    texture.Get(),
+                    m_Device->DeviceContext.Get(),
+                    m_frameCounter++,           // frameId
+                    __rdtsc()                    // timestamp
+                );
             }
+
+          
             AcquiredBuffer.Reset();
 
             // Indicate to OS that we have finished inital processing of the frame, it is a hint that
@@ -835,16 +855,16 @@ void IndirectMonitorContext::AssignSwapChain(IDDCX_SWAPCHAIN SwapChain, LUID Ren
     else
     {
         // Create a new swap-chain processing thread
-        if (!OpenSharedBuffer()) {
-            DRV_LOG("OpenSharedBuffer error");
-            return;
-        }
-        //m_pVideoBuffer = new VideoBuffer(m_Config.width, m_Config.height, m_Config.byteDepth);
-        //if (!m_pVideoBuffer->Initialize(Device->Device,m_frameReadyName.c_str(),m_frameProcessedName.c_str(),m_sharedMemoryName.c_str(),m_sharedTextureName1.c_str(),m_sharedTextureName2.c_str())) {
-        //    DRV_LOG("m_pVideoBuffer->Initializ error");
-        //    return ;
+        //if (!OpenSharedBuffer()) {
+        //    DRV_LOG("OpenSharedBuffer error");
+        //    return;
         //}
-        m_ProcessingThread.reset(new SwapChainProcessor(SwapChain, Device, NewFrameEvent,m_pBuffer));
+        m_pVideoBuffer = new VideoBuffer(m_Config.width, m_Config.height, m_Config.byteDepth);
+        if (!m_pVideoBuffer->Initialize(Device->Device,m_frameReadyName.c_str(),m_frameProcessedName.c_str(),m_sharedMemoryName.c_str(),m_sharedTextureName1.c_str(),m_sharedTextureName2.c_str())) {
+            DRV_LOG("m_pVideoBuffer->Initializ error");
+            return ;
+        }
+        m_ProcessingThread.reset(new SwapChainProcessor(SwapChain, Device, NewFrameEvent,m_pBuffer,m_pVideoBuffer));
     }
 }
 
@@ -899,61 +919,6 @@ void DoubleBuffer::PushFrame(ID3D11Texture2D* pTexture, ID3D11DeviceContext* pCo
     if (!m_pMappedBuffer || !pTexture || !pContext) return;
 
     FrameHeader* header = (FrameHeader*)m_pMappedBuffer;
-    
-
-    // Check to wait for the application if it doesnt have time to proccess frame
-    //if (header->bufferIndex == header->processedBufferIndex) {
-    //    DWORD waitResult = WaitForSingleObject(
-    //        m_hFrameProcessedEvent,       
-    //        5
-    //    );
-    //    switch (waitResult)
-    //    {
-    //    case WAIT_OBJECT_0:
-    //    {
-    //        ResetEvent(m_hFrameProcessedEvent);
-    //        break;
-    //    }
-    //    case WAIT_TIMEOUT:
-    //    {
-    //        break;
-    //    }
-    //    default:
-    //    {
-    //        ResetEvent(m_hFrameProcessedEvent);
-    //        break;
-    //    }
-    //    }
-    //}
-    //else {
-    //    ResetEvent(m_hFrameProcessedEvent);
-    //}
-
-    //if (!header->bufferProccesed[header->bufferIndex == 0]) {
-    //    DWORD waitResult = WaitForSingleObject(
-    //        m_hFrameProcessedEvent,       
-    //        3
-    //    );
-    //    switch (waitResult)
-    //    {
-    //    case WAIT_OBJECT_0:
-    //    {
-    //        header->bufferProccesed[header->bufferIndex == 0] = false;
-    //        ResetEvent(m_hFrameProcessedEvent);
-    //        break;
-    //    }
-    //    case WAIT_TIMEOUT:
-    //    {
-    //        header->bufferProccesed[header->bufferIndex == 0] = true;
-    //        break;
-    //    }
-    //    default:
-    //    {
-    //        ResetEvent(m_hFrameProcessedEvent);
-    //        break;
-    //    }
-    //    }
-    //}
 
     uint32_t currentOffset = (header->bufferIndex == 0) ? m_buffer1_offset : m_buffer0_offset;
 
@@ -1044,9 +1009,14 @@ void DoubleBuffer::Cleanup()
 VideoBuffer::VideoBuffer(uint16_t width, uint16_t height, uint16_t byteDepth) {
     m_width = width;
     m_height = height;
-    m_byteDepth = m_byteDepth;
+    m_byteDepth = byteDepth;
 }
 
+VideoBuffer::~VideoBuffer() {
+    Cleanup();
+}
+
+// This method has different realization
 bool VideoBuffer::Initialize(
     Microsoft::WRL::ComPtr<ID3D11Device> device,
     const wchar_t* frameReadyName,
@@ -1055,49 +1025,149 @@ bool VideoBuffer::Initialize(
     const wchar_t* sharedTextureName1,
     const wchar_t* sharedTextureName2)
 {
+    DWORD memErr;
+
+    DRV_LOGW(sharedTextureName1);
+    DRV_LOGW(sharedTextureName2);
+
+
     m_hFrameReadyEvent = OpenEventW(EVENT_ALL_ACCESS, FALSE, frameReadyName);
-    DRV_LOG("OpenEventW m_hFrameReadyEvent returned hr=0x%p",
-        m_hFrameReadyEvent);
+    if (m_hFrameReadyEvent == NULL) {
+        DRV_LOG("OpenEventW m_hFrameReadyEvent returned handle=0x%p",
+            m_hFrameReadyEvent);
+        return false;
+    }
 
     m_hFrameProcessedEvent = OpenEventW(EVENT_ALL_ACCESS, FALSE, frameProcessedName);
-    DRV_LOG("OpenEventW m_hFrameProcessedEvent returned hr=0x%p",
-        m_hFrameProcessedEvent);
-
+    if (m_hFrameProcessedEvent == NULL) {
+        DRV_LOG("OpenEventW m_hFrameProcessedEvent returned handle=0x%p",
+            m_hFrameProcessedEvent);
+        return false;
+    }
+    
     m_hSharedInfo = OpenFileMappingW(FILE_MAP_ALL_ACCESS, FALSE, sharedInfoName);
-    DWORD memErr = GetLastError();
-    DRV_LOG("OpenFileMappingW returned handle=0x%p, LastError=%d",
-        m_hSharedInfo, memErr);
+    if (m_hSharedInfo == NULL) {
+        memErr = GetLastError();
+        DRV_LOG("OpenFileMappingW returned handle=0x%p, LastError=%d",
+            m_hSharedInfo, memErr);
+        return false;
+    }
 
     HRESULT hr = device->QueryInterface(IID_PPV_ARGS(&m_device1));
-    memErr = GetLastError();
-    DRV_LOG("QueryInterface returned hr=0x%p, LastError=%d",
-        hr, memErr);
+    if (FAILED(hr)) {
+        memErr = GetLastError();
+        DRV_LOG("QueryInterface returned hr=0x%p, LastError=%d",
+            hr, memErr);
+    }
 
     hr = m_device1->OpenSharedResourceByName(sharedTextureName1,
         DXGI_SHARED_RESOURCE_READ | DXGI_SHARED_RESOURCE_WRITE,
         IID_PPV_ARGS(&m_texture1));
-
-    memErr = GetLastError();
-    DRV_LOG("OpenSharedResourceByName returned hr=0x%p, LastError=%d",
-        hr, memErr);
-
+    if (FAILED(hr)) {
+        memErr = GetLastError();
+        DRV_LOG("OpenSharedResourceByName returned hr=0x%p, LastError=%d",
+            hr, memErr);
+    }
+    DRV_LOG("0x%p", m_texture1.Get());
+    
     hr = m_device1->OpenSharedResourceByName(sharedTextureName2,
         DXGI_SHARED_RESOURCE_READ | DXGI_SHARED_RESOURCE_WRITE,
         IID_PPV_ARGS(&m_texture2));
+    if (FAILED(hr)) {
+        memErr = GetLastError();
+        DRV_LOG("OpenSharedResourceByName returned hr=0x%p, LastError=%d",
+            hr, memErr);
+    }
+    DRV_LOG("0x%p", m_texture2.Get());
 
-    memErr = GetLastError();
-    DRV_LOG("OpenSharedResourceByName returned hr=0x%p, LastError=%d",
-        hr, memErr);
+    D3D11_TEXTURE2D_DESC desk2 = {};
+    m_texture1->GetDesc(&desk2);
 
+    D3D11_TEXTURE2D_DESC desk3 = {};
+    m_texture2->GetDesc(&desk3);
+
+    DRV_LOG("desk2 width %d, height %d, format %d ", desk2.Width, desk2.Height, desk2.Format);
+    DRV_LOG("desk3 width %d, height %d, format %d ", desk3.Width, desk3.Height, desk3.Format);
+
+    m_pMappedBuffer = MapViewOfFile(m_hSharedInfo, FILE_MAP_ALL_ACCESS, 0, 0, 0);
+    if (!m_pMappedBuffer) return false;
+
+    m_device1->GetImmediateContext(&m_context);
+    DRV_LOG("VideoBuffer initialized successfully");
     return true;
 }
 
-void VideoBuffer::VideoBufferPushFrame() {
-    
+void VideoBuffer::PushFrame(ID3D11Texture2D* sourceTexture, ID3D11DeviceContext* pContext, uint64_t frameId, uint64_t timestamp) {
+    FrameHeader* header = (FrameHeader*)m_pMappedBuffer;
+
+    uint16_t writeBuffer = header->freshBufferIdx ^ 1;
+
+    if (header->bufferProccesed[writeBuffer]) {
+        header->bufferProccesed[writeBuffer] = false;
+    }
+    else {
+        DWORD waitResult = WaitForSingleObject(
+            m_hFrameProcessedEvent,       
+            INFINITE);
+        switch (waitResult)
+        {
+        case WAIT_OBJECT_0:
+        {
+            header->bufferProccesed[writeBuffer] = false;
+            ResetEvent(m_hFrameProcessedEvent);
+            break;
+        }
+        case WAIT_TIMEOUT:
+        {
+            header->bufferProccesed[writeBuffer] = true;
+            break;
+        }
+        default:
+        {
+            ResetEvent(m_hFrameProcessedEvent);
+            break;
+        }
+        }
+    }
+    if (writeBuffer == 0) {
+        m_context->CopyResource(m_texture1.Get(), sourceTexture);
+        DRV_LOG("m_texture1 0x%p,", m_texture1.Get());
+    }
+    else {
+        m_context->CopyResource(m_texture2.Get(), sourceTexture);
+        DRV_LOG("m_texture2 0x%p,", m_texture2.Get());
+    }
+    pContext->Flush();
+
+    // Обновляем метаданные
+    header->frameId = frameId;
+    header->timestamp = timestamp;
+    header->freshBufferIdx = writeBuffer; // теперь свежий буфер — записанный
+
+    // Сигналим приложению
+    SetEvent(m_hFrameReadyEvent);
 }
 
-void VideoBuffer::VideoBufferMarkFrameProcessed() {
+void VideoBuffer::MarkFrameProcessed() {
     //Only for app
+}
+
+VideoBuffer::Frame VideoBuffer::GetLatestFrame() {
+    //Only for app
+    return Frame();
+}
+
+void VideoBuffer::Cleanup()
+{
+    if (m_pMappedBuffer) UnmapViewOfFile(m_pMappedBuffer);
+    if (m_hSharedInfo) CloseHandle(m_hSharedInfo);
+    if (m_hFrameReadyEvent) CloseHandle(m_hFrameReadyEvent);
+    if (m_hFrameProcessedEvent) CloseHandle(m_hFrameProcessedEvent);
+
+    m_pMappedBuffer = nullptr;
+    m_hSharedInfo = nullptr;
+    m_hFrameReadyEvent = nullptr;
+    m_hFrameProcessedEvent = nullptr;
 }
 
 #pragma endregion

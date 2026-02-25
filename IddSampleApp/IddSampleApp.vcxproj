@@ -141,6 +141,7 @@
     <ClCompile Include="GpuDisplay.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MonitorManager.cpp" />
+    <ClCompile Include="TestDisplay.cpp" />
     <ClCompile Include="VideoBuffer.cpp" />
     <ClCompile Include="VideoDisplay.cpp" />
   </ItemGroup>
@@ -150,6 +151,7 @@
     <ClInclude Include="..\VideoBuffer.h" />
     <ClInclude Include="GpuDisplay.h" />
     <ClInclude Include="MonitorManager.h" />
+    <ClInclude Include="TestDisplay.h" />
     <ClInclude Include="VideoDisplay.h" />
   </ItemGroup>
   <ItemGroup>

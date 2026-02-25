@@ -186,6 +186,7 @@ Monitor::Monitor(const MonitorConfig& config, ID3D11Device* device, ID3D11Device
     m_context(context),
     m_Config(config),
     m_pBuffer(nullptr),
+    m_pVideoBuffer(nullptr),
     m_gDisplay(nullptr),
     m_running(false),
     m_threadFinished(false)
@@ -213,15 +214,15 @@ bool Monitor::Initialize(const wchar_t* frameReadyName,
 
     //m_gDisplay = new GpuDisplay(m_Config.width, m_Config.height, m_device.Get(), m_context.Get());
 
-    if (!CreateSharedBuffer(frameReadyName, frameProcessedName, sharedMemoryName)) {
-        return false;
-    }
-
-    //m_pVideoBuffer = new VideoBuffer(m_Config.width, m_Config.height, m_Config.byteDepth);
-    //if (!m_pVideoBuffer->Initialize(m_device,frameReadyName,frameProcessedName,sharedMemoryName,sharedTextureName1,sharedTextureName2)) {
-    //    printf("m_pVideoBuffer->Initialize ERROR\n");
+    //if (!CreateSharedBuffer(frameReadyName, frameProcessedName, sharedMemoryName)) {
     //    return false;
     //}
+
+    m_pVideoBuffer = new VideoBuffer(m_Config.width, m_Config.height, m_Config.byteDepth);
+    if (!m_pVideoBuffer->Initialize(m_device,frameReadyName,frameProcessedName,sharedMemoryName,sharedTextureName1,sharedTextureName2)) {
+        printf("m_pVideoBuffer->Initialize ERROR\n");
+        return false;
+    }
 
     m_runThread = std::thread(&Monitor::Run, this);
     m_runThread.detach();
@@ -230,7 +231,8 @@ bool Monitor::Initialize(const wchar_t* frameReadyName,
 }
 
 void Monitor::Run() {
-    VideoDisplay* vidDisplay = new VideoDisplay(m_Config.width,m_Config.height);
+    //VideoDisplay* vidDisplay = new VideoDisplay(m_Config.width,m_Config.height);
+    TestDisplay* testDisplay = new TestDisplay(m_Config.width, m_Config.height,m_device.Get(), m_context.Get());
     //if (m_gDisplay->Initialize()) {
     //    m_running = true;
     //}
@@ -242,8 +244,8 @@ void Monitor::Run() {
     {
         // Ждём, пока драйвер скажет: "новый кадр готов"
         DWORD waitResult = WaitForSingleObject(
-            m_pBuffer->GetFrameReadyEvent(),       // handle события
-            5        // ждать бесконечно (или 5000 мс, например)
+            m_pVideoBuffer->GetFrameReadyEvent(),       // handle события
+            50      // ждать бесконечно (или 5000 мс, например)
         );
         
 
@@ -255,30 +257,33 @@ void Monitor::Run() {
         {
         case WAIT_OBJECT_0:
         {
-            ResetEvent(m_pBuffer->GetFrameReadyEvent());
+            ResetEvent(m_pVideoBuffer->GetFrameReadyEvent());
 
-            auto frame = m_pBuffer->GetLatestFrame();
+            auto frame = m_pVideoBuffer->GetLatestFrame();
+            //m_gDisplay->ShowFrame(frame.texture);
+            std::cout << "Новый" << std::endl;
+            testDisplay->ShowFrame(frame.texture);
+            std::cout << "Новый кадр" << std::endl;
+            std::cout << frame.frameId << '\n';
+            std::cout << frame.texture << '\n';
+            std::cout << frame.bufferIdx << '\n';
+            std::cout << frame.size << '\n';
+            std::cout << frame.width << '\n';
+            std::cout << frame.height << '\n';
+            std::cout << frame.byteDepth << '\n';
 
-            vidDisplay->updateFrame((void* )frame.pixels);
-            vidDisplay->render();
-
-            //std::cout << "Новый кадр" << std::endl;
-            //std::cout << frame.frameId << '\n';
-            //std::cout << frame.bufferIndex << '\n';
-
-            m_pBuffer->MarkFrameProcessed(frame.bufferIndex);
+            m_pVideoBuffer->MarkFrameProcessed();
 
             break;
         }
 
         case WAIT_TIMEOUT:
         {
-
-
+            //testDisplay->ProcessEvents();
             //if (!m_gDisplay->ProcessEvents()) 
             //    m_running = false;
-            vidDisplay->wait();
-            //std::cout << "Таймаут ожидания кадра\n";
+            //vidDisplay->wait();
+            std::cout << "Таймаут ожидания кадра\n";
             break;
         }
 
@@ -292,7 +297,7 @@ void Monitor::Run() {
             break;
         }
     }
-    delete vidDisplay;
+    delete testDisplay;
     m_threadFinished = true;
 }
 

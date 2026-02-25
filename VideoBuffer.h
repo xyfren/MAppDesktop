@@ -18,14 +18,14 @@ class VideoBuffer
 {
 public:
 	struct Frame {
-		const uint8_t* pixels;
+		ID3D11Texture2D* texture;
 		uint32_t size;
 		uint64_t frameId;
 		uint64_t timestamp;
 		uint16_t width;
 		uint16_t height;
 		uint16_t byteDepth;
-		uint16_t bufferIndex; // Какой буфер читаем
+		uint16_t bufferIdx; // Какой буфер читаем
 	};
 	struct FrameHeader {
 		uint64_t frameId;
@@ -35,12 +35,13 @@ public:
 		uint16_t byteDepth;
 		uint32_t format;
 		uint32_t frameSize;
-		uint16_t bufferIndex; // Какой буфер содержит свежий кадр
-		//uint16_t processedBufferIndex; // Какой буфер уже обработан приложением
+		uint16_t freshBufferIdx; // Какой буфер содержит свежий кадр (Заполнен драйвером)
+		uint16_t processingBufferIdx; // Какой буфер сейчас обрабатывается приложением (Заполняется приложением)
 		bool bufferProccesed[2];
 	};
 
 	VideoBuffer(uint16_t width, uint16_t height, uint16_t byteDepth);
+	~VideoBuffer();
 
 	bool Initialize(
 		Microsoft::WRL::ComPtr<ID3D11Device> device,
@@ -51,13 +52,19 @@ public:
 		const wchar_t* sharedTextureName2
 	);
 
-	void VideoBufferPushFrame();
+	void PushFrame(ID3D11Texture2D* sourceTexture, ID3D11DeviceContext* pContext, uint64_t frameId, uint64_t timestamp);
 
-	void VideoBufferMarkFrameProcessed();
+	void MarkFrameProcessed();
 
-	void GetLatestFrame();
+	Frame GetLatestFrame();
+
+	HANDLE GetFrameProcessedEvent() const;
+
+	HANDLE GetFrameReadyEvent() const;
 
 private:
+	void Cleanup();
+
 	uint16_t m_width = 0; 
 	uint16_t m_height = 0; 
 	uint16_t m_byteDepth = 0;
@@ -66,7 +73,10 @@ private:
 	HANDLE m_hFrameReadyEvent = nullptr; // Драйвер -> Приложение
 	HANDLE m_hFrameProcessedEvent = nullptr; // Приложение -> Драйвер
 
+	void* m_pMappedBuffer = nullptr;
+
 	Microsoft::WRL::ComPtr<ID3D11Texture2D> m_texture1, m_texture2;
 	Microsoft::WRL::ComPtr<ID3D11Device1> m_device1;
+	Microsoft::WRL::ComPtr<ID3D11DeviceContext> m_context;
 };
 

@@ -22,6 +22,7 @@
 #include "../VideoBuffer.h"
 #include "GpuDisplay.h"
 #include "VideoDisplay.h"
+#include "TestDisplay.h"
 
 #include <memory>
 

@@ -63,14 +63,32 @@ bool GpuDisplay::Initialize()
 
 bool GpuDisplay::ShowFrame(ID3D11Texture2D* frameTexture)
 {
-    if (!frameTexture || !m_context || !m_swapChain) return false;
+    if (!frameTexture || !m_context || !m_swapChain) {
+        printf("FAIL\n");
+        printf("0x%08X\n", m_context);
+        printf("0x%08X\n", m_swapChain);
+        printf("%d", frameTexture);
+        return false;
+    }
+    HRESULT hr = m_context->GetData(nullptr, nullptr, 0, 0); // пустой запрос дл€ проверки
+    if (FAILED(hr)) {
+        OutputDebugStringA("GPU device removed or hung\n");
+        return false;
+    }
 
-    // Copy frame texture to back buffer
     m_context->CopyResource(m_backBuffer.Get(), frameTexture);
 
-    // Present
-    HRESULT hr = m_swapChain->Present(1, 0); // VSync on
-    return SUCCEEDED(hr);
+    // ѕопробуем без VSync дл€ теста
+    hr = m_swapChain->Present(0, 0); // 0 = без вертикальной синхронизации
+
+    if (FAILED(hr)) {
+        char buf[100];
+        sprintf_s(buf, "Present failed: 0x%08X\n", hr);
+        OutputDebugStringA(buf);
+        return false;
+    }
+
+    return true;
 }
 
 bool GpuDisplay::ProcessEvents()
