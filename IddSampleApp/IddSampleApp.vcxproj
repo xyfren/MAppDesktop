@@ -22,6 +22,7 @@
     <VCProjectVersion>16.0</VCProjectVersion>
     <ProjectGuid>{ED59DFCA-E75B-4DD8-B5C2-6BFF77A225A6}</ProjectGuid>
     <RootNamespace>IddSampleApp</RootNamespace>
+    <WindowsTargetPlatformVersion>$(LatestTargetPlatformVersion)</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'" Label="Configuration">
@@ -121,13 +122,15 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
+      <WarningLevel>Level2</WarningLevel>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <TreatWarningAsError>false</TreatWarningAsError>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -138,16 +141,30 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="ConnectionServer.cpp" />
+    <ClCompile Include="DataServer.cpp" />
+    <ClCompile Include="FrameManager.cpp" />
     <ClCompile Include="GpuDisplay.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="MApp.cpp" />
     <ClCompile Include="MonitorManager.cpp" />
+    <ClCompile Include="MServer.cpp" />
     <ClCompile Include="VideoBuffer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Common.h" />
     <ClInclude Include="..\VideoBuffer.h" />
+    <ClInclude Include="APacket.h" />
+    <ClInclude Include="ConnectionServer.h" />
+    <ClInclude Include="DataServer.h" />
+    <ClInclude Include="DPacket.h" />
+    <ClInclude Include="FPacket.h" />
+    <ClInclude Include="FrameManager.h" />
     <ClInclude Include="GpuDisplay.h" />
+    <ClInclude Include="MApp.h" />
+    <ClInclude Include="MClient.h" />
     <ClInclude Include="MonitorManager.h" />
+    <ClInclude Include="MServer.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\IddSampleDriver\IddSampleDriver.vcxproj">

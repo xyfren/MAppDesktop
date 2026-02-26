@@ -2,13 +2,9 @@
 
 #include <dxgi.h>
 #include <d3d11.h>
-#include <dxgi1_5.h>
-#include <d3d11_2.h>
 #include <d3d11_1.h>
-#include <avrt.h>
 #include <wrl.h>
 #include <time.h>
-#include <windows.h>
 #include <stdint.h>
 #include <cstdio>
 

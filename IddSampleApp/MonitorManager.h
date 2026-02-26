@@ -1,16 +1,19 @@
 #pragma once
 
 #include <iostream>
-#include <windows.h>
 #include <vector>
 #include <stdio.h>
 #include <thread>
 #include <string>
 #include <sstream>
-#include <swdevice.h>
 #include <conio.h>
 #include <wrl.h>
 #include <wchar.h>
+
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+
+#include <swdevice.h>
 
 #include <dxgi.h>
 #include <dxgi1_2.h>

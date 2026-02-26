@@ -1,63 +1,72 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="Source Files">
-      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
-      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    <Filter Include="Server">
+      <UniqueIdentifier>{e1aa4fa2-aefd-4f9f-9a1e-5311e38054bc}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Header Files">
-      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
-      <Extensions>h;hh;hpp;hxx;hm;inl;inc;ipp;xsd</Extensions>
+    <Filter Include="MonitorManager">
+      <UniqueIdentifier>{a4aacdc5-38fa-493d-b594-93bff4c904be}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Resource Files">
-      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
-      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    <Filter Include="FrameManager">
+      <UniqueIdentifier>{3b902ebc-f8f4-4ae7-b011-d7fc29360a35}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="main.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="ConnectionServer.cpp">
+      <Filter>Server</Filter>
     </ClCompile>
-    <ClCompile Include="MonitorManager.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="DoubleBuffer.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="DataServer.cpp">
+      <Filter>Server</Filter>
     </ClCompile>
     <ClCompile Include="GpuDisplay.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>MonitorManager</Filter>
     </ClCompile>
-    <ClCompile Include="VideoDisplay.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
+    <ClCompile Include="main.cpp" />
     <ClCompile Include="VideoBuffer.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>MonitorManager</Filter>
     </ClCompile>
-    <ClCompile Include="TestDisplay.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="MonitorManager.cpp">
+      <Filter>MonitorManager</Filter>
     </ClCompile>
+    <ClCompile Include="MApp.cpp" />
+    <ClCompile Include="MServer.cpp">
+      <Filter>Server</Filter>
+    </ClCompile>
+    <ClCompile Include="FrameManager.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="MonitorManager.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="APacket.h">
+      <Filter>Server</Filter>
     </ClInclude>
-    <ClInclude Include="..\Common.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="..\Common.h" />
+    <ClInclude Include="ConnectionServer.h">
+      <Filter>Server</Filter>
     </ClInclude>
-    <ClInclude Include="..\DoubleBuffer.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="DataServer.h">
+      <Filter>Server</Filter>
     </ClInclude>
     <ClInclude Include="GpuDisplay.h">
-      <Filter>Header Files</Filter>
+      <Filter>MonitorManager</Filter>
     </ClInclude>
-    <ClInclude Include="VideoDisplay.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="MApp.h" />
+    <ClInclude Include="MClient.h">
+      <Filter>Server</Filter>
+    </ClInclude>
+    <ClInclude Include="MonitorManager.h">
+      <Filter>MonitorManager</Filter>
+    </ClInclude>
+    <ClInclude Include="MServer.h">
+      <Filter>Server</Filter>
     </ClInclude>
     <ClInclude Include="..\VideoBuffer.h">
-      <Filter>Header Files</Filter>
+      <Filter>MonitorManager</Filter>
     </ClInclude>
-    <ClInclude Include="TestDisplay.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="DPacket.h">
+      <Filter>Server</Filter>
     </ClInclude>
+    <ClInclude Include="FPacket.h">
+      <Filter>Server</Filter>
+    </ClInclude>
+    <ClInclude Include="FrameManager.h" />
   </ItemGroup>
 </Project>
