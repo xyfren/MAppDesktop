@@ -30,7 +30,8 @@ struct RDPacket {
     uint16_t type = 201;
     uint16_t response = 0;
     uint32_t ipAddress = 0;
-    uint16_t port = 0;
+    uint16_t connectionPort = 0;
+    uint16_t dataPort = 0;
 
     std::vector<uint8_t> bytes() const {
         std::vector<uint8_t> byteArray(sizeof(DPacket), 0);

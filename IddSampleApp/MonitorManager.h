@@ -1,4 +1,4 @@
-#pragma once
+п»ї#pragma once
 
 #include <iostream>
 #include <vector>
@@ -10,7 +10,6 @@
 #include <wrl.h>
 #include <wchar.h>
 
-#define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
 #include <swdevice.h>
@@ -73,21 +72,21 @@ public:
 
     DriverInfo GetDriverInfo();
 
-    // Функция для FRAME_READY_EVENT со своим внутренним ID
+    // Р¤СѓРЅРєС†РёСЏ РґР»СЏ FRAME_READY_EVENT СЃРѕ СЃРІРѕРёРј РІРЅСѓС‚СЂРµРЅРЅРёРј ID
     static std::wstring GetNextFrameReadyEvent() {
         static int frameReadyId = 0;
         frameReadyId++;
         return std::wstring(L"Global\\IddSampleFrameReady") + L"_" + std::to_wstring(frameReadyId);
     }
 
-    // Функция для FRAME_PROCESSED_EVENT со своим внутренним ID
+    // Р¤СѓРЅРєС†РёСЏ РґР»СЏ FRAME_PROCESSED_EVENT СЃРѕ СЃРІРѕРёРј РІРЅСѓС‚СЂРµРЅРЅРёРј ID
     static std::wstring  GetNextFrameProcessedEvent() {
         static int frameProcessedId = 0;
         frameProcessedId++;
         return std::wstring(L"Global\\IddSampleFrameProcessed") + L"_" + std::to_wstring(frameProcessedId);
     }
 
-    // Функция для SHARED_MEMORY_NAME со своим внутренним ID
+    // Р¤СѓРЅРєС†РёСЏ РґР»СЏ SHARED_MEMORY_NAME СЃРѕ СЃРІРѕРёРј РІРЅСѓС‚СЂРµРЅРЅРёРј ID
     static std::wstring GetNextSharedMemoryName() {
         static int sharedMemoryId = 0;
         sharedMemoryId++;

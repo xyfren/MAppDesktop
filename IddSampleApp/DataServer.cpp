@@ -61,6 +61,63 @@ void DataServer::send(const vector<uint8_t>& data, const boost::asio::ip::udp::e
     );
 }
 
+void DataServer::sendFPacket(shared_ptr<FPacket> packet, const boost::asio::ip::udp::endpoint& targetEndpoint) {
+    if (!m_udpSocket) {
+        std::cerr << "❌ UDP socket not initialized" << std::endl;
+        return;
+    }
+
+    m_udpSocket->async_send_to(
+        boost::asio::buffer(packet->rawData(), FPACKET_HEADER_SIZE + packet->partSize),
+        targetEndpoint,
+        [this, packet](boost::system::error_code ec, size_t bytes_sent) {
+            // packet жив благодаря захвату по значению
+            if (ec) {
+                std::cerr << "❌ Send error: " << ec.message() << std::endl;
+            }
+            else {
+                m_packetsSent++;
+                m_bytesSent += bytes_sent;
+
+                // Можно добавить отладку для последнего пакета кадра
+                if (packet->partId == packet->totalParts - 1) {
+                    std::cout << "📦 Кадр #" << packet->frameId
+                        << " полностью отправлен. Пакетов: " << packet->totalParts
+                        << " Статистика: всего пакетов=" << m_packetsSent << std::endl;
+                }
+            }
+        }
+    );
+}
+
+void DataServer::sendFrame(const vector<uint8_t>& frameData, boost::asio::ip::udp::endpoint& targetEndpoint) {
+    uint32_t totalPackets = (frameData.size() + FPACKET_MAX_FRAME_SIZE - 1) / FPACKET_MAX_FRAME_SIZE;
+
+    static uint32_t frameNumber = 0;
+    // Создаём и отправляем каждый пакет
+    for (uint32_t packetId = 0; packetId < totalPackets; ++packetId) {
+        // Вычисляем смещение и размер для этого пакета
+        size_t offset = packetId * FPACKET_MAX_FRAME_SIZE;
+        size_t remainingSize = frameData.size() - offset;
+        uint16_t packetDataSize = std::min((size_t )FPACKET_MAX_FRAME_SIZE, remainingSize);
+
+        // Создаём пакет (единственное копирование данных!)
+        auto packet = std::make_shared<FPacket>();
+        packet->type = 300;
+        packet->frameId = frameNumber;
+
+        packet->totalParts = totalPackets;
+        packet->partId = packetId;
+        packet->partOffset = offset;
+        packet->partSize = packetDataSize;
+
+        // Копируем данные кадра в пакет
+        std::memcpy(packet->partData, frameData.data() + offset, packetDataSize);
+        sendFPacket(packet, targetEndpoint);
+    }
+    frameNumber++;
+}
+
 void DataServer::handleSendResult(boost::system::error_code ec, size_t bytes_sent) {
     if (ec) {
         cerr << "Ошибка отправки UDP данных: " << ec.message() << endl;

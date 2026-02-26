@@ -16,5 +16,10 @@ struct MClient
 	MClient(){}
 	MClient(shared_ptr<tcp::socket> pSocket) : socket(pSocket), state(State::Connected)
 	{ }
+	bool operator<(const MClient& other) const {
+		return socket->native_handle() < other.socket->native_handle();
+
+	}
+
 };
 

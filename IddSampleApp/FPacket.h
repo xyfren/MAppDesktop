@@ -5,9 +5,10 @@
 #include <iostream>
 
 #define FPACKET_HEADER_SIZE 16
-#define MAX_FRAME_SIZE 65520 // (65536 - 16)
+#define FPACKET_MAX_FRAME_SIZE 65520 // (65536 - 16)
 
 //Frame packet
+#pragma pack(push,1)
 struct FPacket {
     uint16_t type = 300;
     uint32_t frameId = 0;
@@ -16,7 +17,7 @@ struct FPacket {
     uint16_t partId = 0;
     uint32_t partOffset = 0;
     uint16_t partSize = 0;
-    uint8_t partData[MAX_FRAME_SIZE];
+    uint8_t partData[FPACKET_MAX_FRAME_SIZE];
 
     std::vector<uint8_t> bytes() const {
         std::vector<uint8_t> byteArray(sizeof(FPacket), 0);
@@ -24,15 +25,8 @@ struct FPacket {
         return byteArray;
     }
 
-    //static FPacket fromBytes(const std::vector<uint8_t>& data) {
-    //    FPacket packet;
-
-    //    if (data.size() < sizeof(FPacket)) {
-    //        std::cerr << "Not enough data to reconstruct APacket";
-    //    }
-
-    //    std::memcpy(&packet, data.data(), FPACKET_HEADER_SIZE);
-
-    //    return packet;
-    //}
+    const uint8_t* rawData() const {
+        return reinterpret_cast<const uint8_t*>(this);
+    }
 };
+#pragma pack(pop)

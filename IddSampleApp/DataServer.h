@@ -8,7 +8,12 @@
 #include <set>
 #include <mutex>
 
+#include "DPacket.h"
+#include "FPacket.h"
+
 using namespace std;
+
+using namespace boost::asio::ip;
 
 class DataServer
 {
@@ -18,18 +23,25 @@ public:
 
     void run(uint16_t port);
     void send(const vector<uint8_t>& data, const boost::asio::ip::udp::endpoint& targetEndpoint);
+    void sendFPacket(shared_ptr<FPacket> packet, const boost::asio::ip::udp::endpoint& targetEndpoint);
 
-    void setMessageHandler(function<void(const vector<uint8_t>& data, const boost::asio::ip::udp::endpoint& fromEndpoint)> messageHandler);
+    void sendFrame(const vector<uint8_t>& frameData, boost::asio::ip::udp::endpoint& targetEndpoint);
+
+    void setMessageHandler(function<void(const vector<uint8_t>& data, const udp::endpoint& fromEndpoint)> messageHandler);
 private:
     void handleUdpReceive();
     void handleSendResult(boost::system::error_code ec, size_t bytes_sent);
 
 	boost::asio::io_context& m_ioContext;
 
-    unique_ptr<boost::asio::ip::udp::socket> m_udpSocket;
-    function<void(const vector<uint8_t>& data, const boost::asio::ip::udp::endpoint& fromEndpoint)> m_messageHandler;
+    unique_ptr<udp::socket> m_udpSocket;
+    function<void(const vector<uint8_t>& data, const udp::endpoint& fromEndpoint)> m_messageHandler;
 
     array<uint8_t, 1500> m_receiveBuffer;
-    boost::asio::ip::udp::endpoint m_remoteEndpoint;
+    udp::endpoint m_remoteEndpoint;
+
+    std::atomic<size_t> m_framesSent{ 0 };
+    std::atomic<size_t> m_packetsSent{ 0 };
+    std::atomic<size_t> m_bytesSent{ 0 };
 };
 

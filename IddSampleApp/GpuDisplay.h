@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_syswm.h>
 #include <d3d11.h>

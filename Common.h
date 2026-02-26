@@ -1,5 +1,3 @@
-// This file common for both projects
-
 #pragma once
 
 #include <stdint.h>
@@ -35,8 +33,8 @@ struct DriverInfo {
 
 struct CreateMonitorRequest {
     MonitorConfig config;
-    WCHAR frameReadyName[128] = {}; // Драйвер -> Приложение: "новый кадр готов"
-    WCHAR frameProcessedName[128] = {}; // Приложение -> Драйвер: "кадр обработан"
+    WCHAR frameReadyName[128] = {};
+    WCHAR frameProcessedName[128] = {};
     WCHAR sharedMemoryName[128] = {};
     WCHAR sharedTextureName1[128] = {};
     WCHAR sharedTextureName2[128] = {};

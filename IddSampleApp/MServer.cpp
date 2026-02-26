@@ -10,9 +10,26 @@ MServer::~MServer() {
 	delete m_dataServer;
 }
 
+std::string MServer::getLocalIpAddress(boost::asio::io_context& io_context) {
+    boost::asio::ip::tcp::resolver resolver(io_context);
+
+    std::string host_name = boost::asio::ip::host_name();
+
+    boost::asio::ip::tcp::resolver::results_type results = resolver.resolve(host_name, "");
+
+    for (auto const& endpoint : results) {
+        boost::asio::ip::address addr = endpoint.endpoint().address();
+        if (addr.is_v4() && !addr.is_loopback()) {
+            return addr.to_string();
+
+        }
+    }
+}
+
 void MServer::setup(uint16_t connectionPort, uint16_t dataPort) {
 	m_connectionPort = connectionPort;
 	m_dataPort = dataPort;
+    m_serverLocalAddress = getLocalIpAddress(m_ioContext);
 
     m_connectionServer->setOpenHandler(bind(&MServer::onOpen, this, placeholders::_1));
     m_connectionServer->setMessageHandler(bind(&MServer::onMessageC, this, placeholders::_1, placeholders::_2));
@@ -22,6 +39,7 @@ void MServer::setup(uint16_t connectionPort, uint16_t dataPort) {
 }
 
 void MServer::run() {
+    cout << "Адрес сервера: " << m_serverLocalAddress << endl;
 	m_connectionServer->run(m_connectionPort);
     m_dataServer->run(m_dataPort);
 	m_ioContext.run();
@@ -72,8 +90,9 @@ void MServer::onMessageC(const vector<uint8_t>& data, shared_ptr<tcp::socket> so
             m_clients[socket].udpPort = pack.udpPort;
             m_clients[socket].state = MClient::State::Authorized;
         }
+        MonitorConfig config;
+        m_createMonitorCallback(config,socket);
     }
-
 }
 
 void MServer::onClose(shared_ptr<tcp::socket> socket) {
@@ -89,5 +108,20 @@ void MServer::onMessageD(const vector<uint8_t>& data, const boost::asio::ip::udp
     cout << "Новое сообщение: " << str << endl;
     cout << "Размер: " << data.size() << endl;
     const uint16_t packetType = *(reinterpret_cast<const uint16_t*>(data.data()));
-    cout << "Тип пакета: " << endl;
+    cout << "Тип пакета: " << packetType << endl;
+    if (packetType == 200) {
+        RDPacket packet;
+        packet.ipAddress = boost::asio::ip::make_address_v4(m_serverLocalAddress).to_uint();
+        packet.connectionPort = m_connectionPort;
+        packet.dataPort = m_dataPort;
+        m_dataServer->send(packet.bytes(), fromEndpoint);
+    }
+}
+
+void MServer::setCreateMonitorCallback(function<void(MonitorConfig& config, shared_ptr<tcp::socket> socket)> createMonitorCallback) {
+    m_createMonitorCallback = createMonitorCallback;
+}
+
+void MServer::setRemoveMonitorCallback(function<void(MonitorConfig& config, shared_ptr<tcp::socket> socket)> removeMonitorCallback) {
+    m_removeMonitorCallback = removeMonitorCallback;
 }

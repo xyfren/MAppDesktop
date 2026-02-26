@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 
 #include <dxgi.h>
 #include <d3d11.h>
@@ -21,7 +21,7 @@ public:
 		uint16_t width;
 		uint16_t height;
 		uint16_t byteDepth;
-		uint16_t bufferIdx; // Êàêîé áóôåð ÷èòàåì
+		uint16_t bufferIdx; // ÐšÐ°ÐºÐ¾Ð¹ Ð±ÑƒÑ„ÐµÑ€ Ñ‡Ð¸Ñ‚Ð°ÐµÐ¼
 	};
 	struct FrameHeader {
 		uint64_t frameId;
@@ -31,8 +31,8 @@ public:
 		uint16_t byteDepth;
 		uint32_t format;
 		uint32_t frameSize;
-		uint16_t freshBufferIdx; // Êàêîé áóôåð ñîäåðæèò ñâåæèé êàäð (Çàïîëíåí äðàéâåðîì)
-		uint16_t processingBufferIdx; // Êàêîé áóôåð ñåé÷àñ îáðàáàòûâàåòñÿ ïðèëîæåíèåì (Çàïîëíÿåòñÿ ïðèëîæåíèåì)
+		uint16_t freshBufferIdx; // ÐšÐ°ÐºÐ¾Ð¹ Ð±ÑƒÑ„ÐµÑ€ ÑÐ¾Ð´ÐµÑ€Ð¶Ð¸Ñ‚ ÑÐ²ÐµÐ¶Ð¸Ð¹ ÐºÐ°Ð´Ñ€ (Ð—Ð°Ð¿Ð¾Ð»Ð½ÐµÐ½ Ð´Ñ€Ð°Ð¹Ð²ÐµÑ€Ð¾Ð¼)
+		uint16_t processingBufferIdx; // ÐšÐ°ÐºÐ¾Ð¹ Ð±ÑƒÑ„ÐµÑ€ ÑÐµÐ¹Ñ‡Ð°Ñ Ð¾Ð±Ñ€Ð°Ð±Ð°Ñ‚Ñ‹Ð²Ð°ÐµÑ‚ÑÑ Ð¿Ñ€Ð¸Ð»Ð¾Ð¶ÐµÐ½Ð¸ÐµÐ¼ (Ð—Ð°Ð¿Ð¾Ð»Ð½ÑÐµÑ‚ÑÑ Ð¿Ñ€Ð¸Ð»Ð¾Ð¶ÐµÐ½Ð¸ÐµÐ¼)
 		bool bufferProccesed[2];
 	};
 
@@ -66,8 +66,8 @@ private:
 	uint16_t m_byteDepth = 0;
 
 	HANDLE m_hSharedInfo = nullptr;
-	HANDLE m_hFrameReadyEvent = nullptr; // Äðàéâåð -> Ïðèëîæåíèå
-	HANDLE m_hFrameProcessedEvent = nullptr; // Ïðèëîæåíèå -> Äðàéâåð
+	HANDLE m_hFrameReadyEvent = nullptr; // Ð”Ñ€Ð°Ð¹Ð²ÐµÑ€ -> ÐŸÑ€Ð¸Ð»Ð¾Ð¶ÐµÐ½Ð¸Ðµ
+	HANDLE m_hFrameProcessedEvent = nullptr; // ÐŸÑ€Ð¸Ð»Ð¾Ð¶ÐµÐ½Ð¸Ðµ -> Ð”Ñ€Ð°Ð¹Ð²ÐµÑ€
 
 	void* m_pMappedBuffer = nullptr;
 
