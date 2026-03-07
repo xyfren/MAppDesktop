@@ -3,6 +3,14 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
+VOID WINAPI
+CreationCallback(
+	_In_ HSWDEVICE hSwDevice,
+	_In_ HRESULT hrCreateResult,
+	_In_opt_ PVOID pContext,
+	_In_opt_ PCWSTR pszDeviceInstanceId
+);
+
 MApp::MApp() {
 	m_pMonitorManager = new MonitorManager();
 	m_pMServer = new MServer();
@@ -19,6 +27,42 @@ MApp::~MApp() {
 }
 
 int MApp::run() {
+	HANDLE hEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+	HSWDEVICE hSwDevice;
+	SW_DEVICE_CREATE_INFO createInfo = { 0 };
+
+	createInfo.cbSize = sizeof(createInfo);
+	createInfo.pszzCompatibleIds = L"IddSampleDriver\0\0";
+	createInfo.pszInstanceId = L"IddSampleDriver";
+	createInfo.pszzHardwareIds = L"IddSampleDriver\0\0";
+	createInfo.pszDeviceDescription = L"Idd Sample Driver";
+	createInfo.CapabilityFlags = SWDeviceCapabilitiesRemovable |
+		SWDeviceCapabilitiesSilentInstall |
+		SWDeviceCapabilitiesDriverRequired;
+
+	// Create the device
+	HRESULT hr = SwDeviceCreate(L"IddSampleDriver",
+		L"HTREE\\ROOT\\0",
+		&createInfo,
+		0,
+		nullptr,
+		CreationCallback,
+		&hEvent,
+		&hSwDevice);
+	if (FAILED(hr))
+	{
+		printf("SwDeviceCreate failed with 0x%lx\n", hr);
+		return 1;
+	}
+
+	// Wait for callback to signal that the device has been created
+	printf("Waiting for device to be created....\n");
+	DWORD waitResult = WaitForSingleObject(hEvent, 10000);
+	if (waitResult != WAIT_OBJECT_0)
+	{
+		printf("Wait for device creation failed\n");
+		return 1;
+	}
 	if (!m_pMonitorManager->Initialize()) {
 		cout << "Failed to initialize MonitorManager" << endl;	
 		return -1;
@@ -48,8 +92,8 @@ int MApp::eventLoop() {
 void MApp::createMonitorCallback(MonitorConfig config, std::shared_ptr<MClient> client) {
 	{
 		lock_guard<mutex> lock(monitorMutex);
-		cout << "New monitor added " << config.width << " " << config.height << endl;
-		config.monitorId = m_MonitorClient.size() + 1;
+		cout << "New monitor added " << config.width << " " << config.height << " " << config.refreshRate << endl;
+		config.monitorId = m_MonitorClient.size();
 		config.byteDepth = 4;
 		config.enabled = true;
 
@@ -114,4 +158,19 @@ void MApp::sendFrameCallback(std::shared_ptr<Monitor> pMonitor, uint32_t frameId
 	}
 	m_pMServer->sendFrame(outputBuffer,outputMutex,m_MonitorClient.left.at(pMonitor)->targetEndpoint);
 
+}
+
+VOID WINAPI
+CreationCallback(
+	_In_ HSWDEVICE hSwDevice,
+	_In_ HRESULT hrCreateResult,
+	_In_opt_ PVOID pContext,
+	_In_opt_ PCWSTR pszDeviceInstanceId
+)
+{
+	HANDLE hEvent = *(HANDLE*)pContext;
+	SetEvent(hEvent);
+	UNREFERENCED_PARAMETER(hSwDevice);
+	UNREFERENCED_PARAMETER(hrCreateResult);
+	UNREFERENCED_PARAMETER(pszDeviceInstanceId);
 }

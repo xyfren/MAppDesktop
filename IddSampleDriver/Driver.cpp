@@ -680,6 +680,8 @@ NTSTATUS IndirectDeviceContext::AddMonitor(CreateMonitorRequest* pRequest)
         return STATUS_INVALID_PARAMETER;
     }
 
+	DRV_LOG("Adding monitor: id=%d, res=%dx%d@%dHz, byteDepth=%d", pConfig->monitorId, pConfig->width, pConfig->height, pConfig->refreshRate, pConfig->byteDepth);
+
     // 2. Создаём EDID для нового разрешения
     BYTE dynamicEdid[128];
     IddTools::GenerateEdid(dynamicEdid, pConfig->width, pConfig->height, pConfig->refreshRate);
