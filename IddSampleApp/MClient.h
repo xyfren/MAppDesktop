@@ -1,25 +1,28 @@
 #pragma once
 
+#pragma warning(push, 0)
 #include <boost/asio.hpp>
 #include <boost/bind/bind.hpp>
-
-using boost::asio::ip::tcp;
+#pragma warning(pop)
 
 struct MClient
 {
 	enum class State {Unconnected,Connected,Authorized};
 	
-	shared_ptr<tcp::socket> socket;
+	std::shared_ptr<boost::asio::ip::tcp::socket> socket;
+	boost::asio::ip::udp::endpoint targetEndpoint;
 	uint16_t udpPort = 0;
 	State state = State::Unconnected;
 
-	MClient(){}
-	MClient(shared_ptr<tcp::socket> pSocket) : socket(pSocket), state(State::Connected)
-	{ }
-	bool operator<(const MClient& other) const {
-		return socket->native_handle() < other.socket->native_handle();
+	MClient() {
 
 	}
 
+	explicit MClient(std::shared_ptr<tcp::socket> pSocket) : socket(pSocket), state(State::Connected)
+	{ }
+	//bool operator<(const MClient& other) const {
+	//	return socket->native_handle() < other.socket->native_handle();
+
+	//}
 };
 

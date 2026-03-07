@@ -25,6 +25,7 @@ public:
 	void run();
 
 	void broadcastMessage(const string& msg);
+	void sendFrame(span<uint8_t> frameData,std::mutex* frameMutex, const udp::endpoint& targetEndpoint);
 
 	void onOpen(shared_ptr<tcp::socket> socket);
 	void onMessageC(const vector<uint8_t>& data, shared_ptr<tcp::socket> socket); // connectionServer message
@@ -32,19 +33,19 @@ public:
 
 	void onMessageD(const vector<uint8_t>& data, const boost::asio::ip::udp::endpoint& fromEndpoint); // dataServer message
 	
-	void setCreateMonitorCallback(function<void(MonitorConfig& config, shared_ptr<tcp::socket> socket)> createMonitorCallback);
-	void setRemoveMonitorCallback(function<void(MonitorConfig& config, shared_ptr<tcp::socket> socket)> removeMonitorCallback);
+	void setCreateMonitorCallback(function<void(MonitorConfig config, std::shared_ptr<MClient> client)> createMonitorCallback);
+	void setRemoveMonitorCallback(function<void(std::shared_ptr<MClient> client)> removeMonitorCallback);
 
 private:
-	function<void(MonitorConfig& config, shared_ptr<tcp::socket> socket)> m_createMonitorCallback;
-	function<void(MonitorConfig& config, shared_ptr<tcp::socket> socket)> m_removeMonitorCallback;
+	function<void(MonitorConfig config, std::shared_ptr<MClient> client)> m_createMonitorCallback;
+	function<void(std::shared_ptr<MClient> client)> m_removeMonitorCallback;
 
 	boost::asio::io_context m_ioContext;
 	
 	string m_serverLocalAddress;
 	
-	int m_connectionPort = 12345;
-	int m_dataPort = 12346;
+	uint16_t m_connectionPort = 12345;
+	uint16_t m_dataPort = 12346;
 
 	ConnectionServer* m_connectionServer;
 	DataServer* m_dataServer;

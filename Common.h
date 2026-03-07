@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 #include <string>
+#include <windows.h>
 
 #define CTL_CODE( DeviceType, Function, Method, Access ) (                 \
     ((DeviceType) << 16) | ((Access) << 14) | ((Function) << 2) | (Method) \

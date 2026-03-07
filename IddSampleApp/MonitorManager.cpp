@@ -25,6 +25,10 @@ bool MonitorManager::Initialize() {
         &m_context
     );
     if (FAILED(hr)) return false;
+
+    if (!ConnectToDriver()) {
+        return false;
+    }
     return true;
 }
 
@@ -32,18 +36,11 @@ bool MonitorManager::ConnectToDriver() {
     return WaitOpenDriver(200, 10000);
 }
 
-bool  MonitorManager::AddMonitor(uint16_t monitorId, uint16_t width, uint16_t height, uint16_t byteDepth, uint16_t refreshRate) {
-    MonitorConfig config = {};
-    config.monitorId = monitorId;
-    config.width = width;
-    config.height = height;
-    config.byteDepth = byteDepth;
-    config.refreshRate = refreshRate;
-    config.enabled = true;
+bool MonitorManager::AddMonitor(std::shared_ptr<Monitor> pMonitor) {
+	pMonitor->setID3D11Device(m_device.Get());
+	pMonitor->setID3D11DeviceContext(m_context.Get());
 
-    Monitor* newMonitor = new Monitor(config,m_device.Get(),m_context.Get());
-
-    m_Monitors.push_back(newMonitor);
+    m_Monitors.push_back(pMonitor);
 
     wchar_t frameReadyName[128] = {};
     wchar_t frameProcessedName[128] = {};
@@ -57,14 +54,14 @@ bool  MonitorManager::AddMonitor(uint16_t monitorId, uint16_t width, uint16_t he
     swprintf_s(sharedTextureName1, GetNextSharedTextureName(1).c_str());
     swprintf_s(sharedTextureName2, GetNextSharedTextureName(2).c_str());
 
-    if (!newMonitor->Initialize(frameReadyName, frameProcessedName, sharedMemoryName, sharedTextureName1, sharedTextureName2)) {
+    if (!pMonitor->Initialize(frameReadyName, frameProcessedName, sharedMemoryName, sharedTextureName1, sharedTextureName2)) {
         std::cout << "Ошибка инициализации\n";
         return false;
     }
     std::cout << "инициализация прошла успешно\n";
 
     CreateMonitorRequest request = {};
-    request.config = config;
+    request.config = pMonitor->GetConfig();
     wcsncpy_s(request.frameReadyName, frameReadyName, _TRUNCATE);
     wcsncpy_s(request.frameProcessedName, frameProcessedName, _TRUNCATE);
     wcsncpy_s(request.sharedMemoryName, sharedMemoryName, _TRUNCATE);
@@ -94,7 +91,6 @@ bool MonitorManager::RemoveMonitor(uint16_t monitorId) {
     if (m_Monitors.size() <= monitorId) return false;
     uint16_t id = monitorId;
     DWORD bytesReturned;
-    delete m_Monitors[monitorId];
     m_Monitors.erase(m_Monitors.begin() + monitorId);
     BOOL result = DeviceIoControl(
         m_hDriverDevice,
@@ -113,7 +109,7 @@ bool MonitorManager::RemoveMonitor(uint16_t monitorId) {
     return true;
 }
 
-DriverInfo MonitorManager::GetDriverInfo() {
+DriverInfo MonitorManager::GetDriverInfo() const {
     DriverInfo info = {};
     DWORD bytesReturned;
     BOOL result = DeviceIoControl(
@@ -181,15 +177,16 @@ bool  MonitorManager::WaitOpenDriver(DWORD intervalMs, DWORD maxTotalTimeMs)
 
 #pragma region Monitor
 
-Monitor::Monitor(const MonitorConfig& config, ID3D11Device* device, ID3D11DeviceContext* context) :
-    m_device(device),
-    m_context(context),
+Monitor::Monitor(const MonitorConfig& config):
+    m_device(nullptr),
+    m_context(nullptr),
     m_Config(config),
     m_pVideoBuffer(nullptr),
     m_gDisplay(nullptr),
     m_running(false),
     m_threadFinished(false)
-{}
+{
+}
 
 Monitor::~Monitor() {
     m_running = false;
@@ -203,6 +200,18 @@ Monitor::~Monitor() {
     }
 }
 
+void Monitor::setID3D11Device(ID3D11Device* device) {
+	m_device.Attach(device);
+}
+
+void Monitor::setID3D11DeviceContext(ID3D11DeviceContext* context) {
+	m_context.Attach(context);
+}
+
+void Monitor::setFrameCallback(SendFrameCallback sendFrameCallback) {
+	m_sendFrameCallback = sendFrameCallback;
+}
+
 bool Monitor::Initialize(const wchar_t* frameReadyName, 
                          const wchar_t* frameProcessedName, 
                          const wchar_t* sharedMemoryName,
@@ -210,7 +219,7 @@ bool Monitor::Initialize(const wchar_t* frameReadyName,
                          const wchar_t* sharedTextureName2)
 {
 
-    m_gDisplay = new GpuDisplay(m_Config.width, m_Config.height, m_device.Get(), m_context.Get());
+    //m_gDisplay = new GpuDisplay(m_Config.width, m_Config.height, m_device.Get(), m_context.Get());
 
     m_pVideoBuffer = new VideoBuffer(m_Config.width, m_Config.height, m_Config.byteDepth);
     if (!m_pVideoBuffer->Initialize(m_device,frameReadyName,frameProcessedName,sharedMemoryName,sharedTextureName1,sharedTextureName2)) {
@@ -225,12 +234,7 @@ bool Monitor::Initialize(const wchar_t* frameReadyName,
 }
 
 void Monitor::Run() {
-    if (m_gDisplay->Initialize()) {
-        m_running = true;
-    }
-    else {
-        std::cout << "Ошибка иницализации GpuDisplay" << std::endl;
-    }
+	m_running = true;
     while (m_running)
     {
         DWORD waitResult = WaitForSingleObject(
@@ -248,21 +252,29 @@ void Monitor::Run() {
         {
             ResetEvent(m_pVideoBuffer->GetFrameReadyEvent());
             auto frame = m_pVideoBuffer->GetLatestFrame();
-            m_gDisplay->ShowFrame(frame.texture);
-            //std::cout << "Новый кадр " << "id = " << frame.frameId <<"; idx = " << frame.bufferIdx << std::endl;
-   
-            m_pVideoBuffer->MarkFrameProcessed();
 
-            if (!m_gDisplay->ProcessEvents())
-                m_running = false;
+            std::cout << "Новый кадр " << "id = " << frame.frameId <<"; idx = " << frame.bufferIdx << std::endl;
+
+            D3D11_MAPPED_SUBRESOURCE mappedResource;
+
+            HRESULT hr = m_context->Map(frame.texture, 0, D3D11_MAP_READ, 0, &mappedResource);
+
+            if (SUCCEEDED(hr))
+            {
+                printf("Mapped texture succ\n");
+
+                m_sendFrameCallback(shared_from_this(), frame.frameId, frame.size, mappedResource.pData);
+
+                m_context->Unmap(frame.texture, 0);
+            }
+
+            m_pVideoBuffer->MarkFrameProcessed();
 
             break;
         }
 
         case WAIT_TIMEOUT:
         {
-            if (!m_gDisplay->ProcessEvents())
-                m_running = false;
 
             //std::cout << "Таймаут ожидания кадра" << std::endl;
             break;
@@ -278,7 +290,6 @@ void Monitor::Run() {
             break;
         }
     }
-    delete m_gDisplay;
     m_threadFinished = true;
 }
 

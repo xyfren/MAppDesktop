@@ -34,19 +34,19 @@ struct RDPacket {
     uint16_t dataPort = 0;
 
     std::vector<uint8_t> bytes() const {
-        std::vector<uint8_t> byteArray(sizeof(DPacket), 0);
-        std::memcpy(byteArray.data(), this, sizeof(DPacket));
+        std::vector<uint8_t> byteArray(sizeof(RDPacket), 0);
+        std::memcpy(byteArray.data(), this, sizeof(RDPacket));
         return byteArray;
     }
 
-    static DPacket fromBytes(const std::vector<uint8_t>& data) {
-        DPacket packet;
+    static RDPacket fromBytes(const std::vector<uint8_t>& data) {
+        RDPacket packet;
 
-        if (data.size() < sizeof(DPacket)) {
+        if (data.size() < sizeof(RDPacket)) {
             std::cerr << "Not enough data to reconstruct APacket";
         }
 
-        std::memcpy(&packet, data.data(), sizeof(DPacket));
+        std::memcpy(&packet, data.data(), sizeof(RDPacket));
         return packet;
     }
 };

@@ -58,13 +58,19 @@ void MServer::broadcastMessage(const string& msg) {
                 if (client.state == MClient::State::Authorized) {
                     boost::asio::ip::tcp::endpoint tcp_ep = socket->remote_endpoint();
                     boost::asio::ip::udp::endpoint targetEndpoint(tcp_ep.address(),client.udpPort);
-                    m_dataServer->send(udpbytes, targetEndpoint);
+                    m_dataServer->send(udpbytes, client.targetEndpoint);
                 }
             }
         }
         catch (const boost::system::system_error& ex) {
             cerr << "Ошибка получения endpoint: " << ex.what() << endl;
         }
+    }
+}
+void MServer::sendFrame(span<uint8_t> frameData, std::mutex* frameMutex, const udp::endpoint& targetEndpoint) {
+    {
+        lock_guard<mutex> lock(*frameMutex);
+        m_dataServer->sendFrame(frameData, targetEndpoint);
     }
 }
 
@@ -88,14 +94,24 @@ void MServer::onMessageC(const vector<uint8_t>& data, shared_ptr<tcp::socket> so
         {
             lock_guard<mutex> lock(m_clientsMutex);
             m_clients[socket].udpPort = pack.udpPort;
+            // Add udp endpoint to MClient 
+            boost::asio::ip::tcp::endpoint tcp_ep = socket->remote_endpoint();
+            boost::asio::ip::udp::endpoint targetEndpoint(tcp_ep.address(), pack.udpPort);
+            m_clients[socket].targetEndpoint = targetEndpoint;
+
             m_clients[socket].state = MClient::State::Authorized;
         }
         MonitorConfig config;
-        m_createMonitorCallback(config,socket);
+		config.width = pack.width;
+        config.height = pack.height;
+		config.refreshRate = pack.refreshRate;
+
+        m_createMonitorCallback(config,make_shared<MClient>(m_clients.at(socket)));
     }
 }
 
 void MServer::onClose(shared_ptr<tcp::socket> socket) {
+    m_removeMonitorCallback(make_shared<MClient>(m_clients.at(socket)));
     {
         lock_guard<mutex> lock(m_clientsMutex);
         m_clients.erase(socket);
@@ -118,10 +134,10 @@ void MServer::onMessageD(const vector<uint8_t>& data, const boost::asio::ip::udp
     }
 }
 
-void MServer::setCreateMonitorCallback(function<void(MonitorConfig& config, shared_ptr<tcp::socket> socket)> createMonitorCallback) {
+void MServer::setCreateMonitorCallback(function<void(MonitorConfig config, shared_ptr<MClient> client)> createMonitorCallback) {
     m_createMonitorCallback = createMonitorCallback;
 }
 
-void MServer::setRemoveMonitorCallback(function<void(MonitorConfig& config, shared_ptr<tcp::socket> socket)> removeMonitorCallback) {
+void MServer::setRemoveMonitorCallback(function<void(shared_ptr<MClient> client)> removeMonitorCallback) {
     m_removeMonitorCallback = removeMonitorCallback;
 }

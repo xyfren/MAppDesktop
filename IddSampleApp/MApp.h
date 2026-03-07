@@ -1,9 +1,11 @@
 ﻿#pragma once
 
+#include <boost/bimap.hpp>
+#include <memory>
+
 #include "MonitorManager.h"
 #include "MServer.h"
-#include <boost/bimap.hpp>
-
+#include "FrameManager.h"
 
 class MApp
 {
@@ -15,16 +17,20 @@ public:
 
 	int eventLoop();
 
-	void createMonitorCallback(MonitorConfig& config, shared_ptr<tcp::socket> socket);
-	void removeMonitorCallback(MonitorConfig& config, shared_ptr<tcp::socket> socket);
+	void createMonitorCallback(MonitorConfig config, std::shared_ptr<MClient> client);
+	void removeMonitorCallback(std::shared_ptr<MClient> client);
 
-	void sendFrameCallback(Monitor* pMonitor, std::vector<uint8_t> frameData);
+	void sendFrameCallback(std::shared_ptr<Monitor> pMonitor, uint32_t frameId,uint32_t frameSize, void* frameData);
+
+	void testSend(std::shared_ptr<MClient> client);
 
 private:
 	MonitorManager* m_pMonitorManager;
 	MServer* m_pMServer;
 
-	boost::bimap<MClient, Monitor*> m_ClientMonitor;
+	std::mutex monitorMutex;
+	boost::bimap<std::shared_ptr<Monitor>, std::shared_ptr<MClient>> m_MonitorClient;
+	std::map<std::shared_ptr<Monitor>, std::shared_ptr<FrameManager>> m_MonitorFrameManager;
 
 };
 

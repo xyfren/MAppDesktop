@@ -15,8 +15,8 @@ DataServer::~DataServer() {
 
 void DataServer::run(uint16_t port) {
     try {
-        m_udpSocket = make_unique<boost::asio::ip::udp::socket>(m_ioContext);
-        boost::asio::ip::udp::endpoint endpoint(boost::asio::ip::udp::v4(), port);
+        m_udpSocket = make_unique<udp::socket>(m_ioContext);
+        udp::endpoint endpoint(udp::v4(), port);
         m_udpSocket->open(endpoint.protocol());
         m_udpSocket->bind(endpoint);
 
@@ -46,7 +46,7 @@ void DataServer::handleUdpReceive() {
         });
 }
 
-void DataServer::send(const vector<uint8_t>& data, const boost::asio::ip::udp::endpoint& targetEndpoint) {
+void DataServer::send(const vector<uint8_t>& data, const udp::endpoint& targetEndpoint) {
     if (!m_udpSocket) return;
 
     // Создаем shared_ptr для продления времени жизни данных
@@ -61,7 +61,7 @@ void DataServer::send(const vector<uint8_t>& data, const boost::asio::ip::udp::e
     );
 }
 
-void DataServer::sendFPacket(shared_ptr<FPacket> packet, const boost::asio::ip::udp::endpoint& targetEndpoint) {
+void DataServer::sendFPacket(shared_ptr<FPacket> packet, const udp::endpoint& targetEndpoint) {
     if (!m_udpSocket) {
         std::cerr << "❌ UDP socket not initialized" << std::endl;
         return;
@@ -90,12 +90,17 @@ void DataServer::sendFPacket(shared_ptr<FPacket> packet, const boost::asio::ip::
     );
 }
 
-void DataServer::sendFrame(const vector<uint8_t>& frameData, boost::asio::ip::udp::endpoint& targetEndpoint) {
+void DataServer::sendFrame(span<uint8_t>& frameData, const udp::endpoint& targetEndpoint) {
+    
     uint32_t totalPackets = (frameData.size() + FPACKET_MAX_FRAME_SIZE - 1) / FPACKET_MAX_FRAME_SIZE;
 
     static uint32_t frameNumber = 0;
+    std::cout << "frameData.size() " << frameData.size() << endl;
+    std::cout << "totalPackets" << totalPackets << endl;
+    
     // Создаём и отправляем каждый пакет
     for (uint32_t packetId = 0; packetId < totalPackets; ++packetId) {
+        std::cout << packetId << endl;
         // Вычисляем смещение и размер для этого пакета
         size_t offset = packetId * FPACKET_MAX_FRAME_SIZE;
         size_t remainingSize = frameData.size() - offset;
@@ -110,6 +115,10 @@ void DataServer::sendFrame(const vector<uint8_t>& frameData, boost::asio::ip::ud
         packet->partId = packetId;
         packet->partOffset = offset;
         packet->partSize = packetDataSize;
+        std::cout << "packet->partId 0" << packet->partId << endl;
+        std::cout << "packet->partOffset " << packet->partOffset << endl;
+        std::cout << "packet->partSize " << packet->partSize << endl;
+
 
         // Копируем данные кадра в пакет
         std::memcpy(packet->partData, frameData.data() + offset, packetDataSize);
@@ -132,6 +141,6 @@ void DataServer::handleSendResult(boost::system::error_code ec, size_t bytes_sen
     }
 }
 
-void DataServer::setMessageHandler(function<void(const vector<uint8_t>& data, const boost::asio::ip::udp::endpoint& fromEndpoint)> messageHandler) {
+void DataServer::setMessageHandler(function<void(const vector<uint8_t>& data, const udp::endpoint& fromEndpoint)> messageHandler) {
     m_messageHandler = messageHandler;
 }

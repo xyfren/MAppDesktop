@@ -9,11 +9,12 @@
 #include <conio.h>
 #include <wrl.h>
 #include <wchar.h>
+#include <functional>
 
 #include <windows.h>
 
 #include <swdevice.h>
-
+#include <span>
 #include <dxgi.h>
 #include <dxgi1_2.h>
 #include <d3d11.h>
@@ -23,11 +24,20 @@
 #include "../VideoBuffer.h"
 #include "GpuDisplay.h"
 
-class Monitor {
-    
+class Monitor;
+
+using SendFrameCallback = std::function<void(std::shared_ptr<Monitor> pMonitor, uint64_t frameId, uint32_t frameSize, void* frameData)>;
+
+class Monitor: public std::enable_shared_from_this<Monitor> {
 public:
-    Monitor(const MonitorConfig& config, ID3D11Device* device, ID3D11DeviceContext* context);
+    Monitor(const MonitorConfig& config);
     ~Monitor();
+
+    void setID3D11Device(ID3D11Device* device);
+    void setID3D11DeviceContext(ID3D11DeviceContext* context);
+	void setFrameCallback(SendFrameCallback sendFrameCallback);
+
+    MonitorConfig GetConfig() const { return m_Config; }
 
     bool Initialize(const wchar_t* frameReadyName,
                     const wchar_t* frameProcessedName,
@@ -50,12 +60,15 @@ private:
     std::thread m_runThread;
     bool m_running;
     bool m_threadFinished;
+
+    SendFrameCallback m_sendFrameCallback;
 };
 
 class MonitorManager {
 private:
     HANDLE m_hDriverDevice;
-    std::vector<Monitor*> m_Monitors;
+    std::vector<std::shared_ptr<Monitor>> m_Monitors;
+
     Microsoft::WRL::ComPtr<ID3D11Device> m_device;
     Microsoft::WRL::ComPtr<ID3D11DeviceContext> m_context;
 public:
@@ -66,11 +79,11 @@ public:
 
     bool ConnectToDriver();
 
-    bool AddMonitor(uint16_t monitorId, uint16_t width, uint16_t height, uint16_t byteDepth, uint16_t refreshRate);
+    bool AddMonitor(std::shared_ptr<Monitor> pMonitor);
 
     bool RemoveMonitor(uint16_t monitorId);
 
-    DriverInfo GetDriverInfo();
+    DriverInfo GetDriverInfo() const;
 
     // Функция для FRAME_READY_EVENT со своим внутренним ID
     static std::wstring GetNextFrameReadyEvent() {

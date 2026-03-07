@@ -93,6 +93,8 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <TreatWarningAsError>false</TreatWarningAsError>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -122,7 +124,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <WarningLevel>Level1</WarningLevel>
+      <WarningLevel>Level3</WarningLevel>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
@@ -130,6 +132,8 @@
       <ConformanceMode>true</ConformanceMode>
       <TreatWarningAsError>false</TreatWarningAsError>
       <LanguageStandard>stdcpp20</LanguageStandard>
+      <DisableSpecificWarnings>
+      </DisableSpecificWarnings>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
@@ -145,6 +149,7 @@
     <ClCompile Include="DataServer.cpp" />
     <ClCompile Include="FrameManager.cpp" />
     <ClCompile Include="GpuDisplay.cpp" />
+    <ClCompile Include="JpegCoder.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MApp.cpp" />
     <ClCompile Include="MonitorManager.cpp" />
@@ -161,6 +166,7 @@
     <ClInclude Include="FPacket.h" />
     <ClInclude Include="FrameManager.h" />
     <ClInclude Include="GpuDisplay.h" />
+    <ClInclude Include="JpegCoder.h" />
     <ClInclude Include="MApp.h" />
     <ClInclude Include="MClient.h" />
     <ClInclude Include="MonitorManager.h" />

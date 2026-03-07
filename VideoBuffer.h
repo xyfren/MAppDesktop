@@ -62,7 +62,7 @@ private:
 	void Cleanup();
 
 	uint16_t m_width = 0; 
-	uint16_t m_height = 0; 
+	uint16_t m_height = 0;
 	uint16_t m_byteDepth = 0;
 
 	HANDLE m_hSharedInfo = nullptr;

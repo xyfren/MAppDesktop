@@ -1,9 +1,11 @@
 ﻿#pragma once
 
+#define BOOST_ASIO_DISABLE_WARNING_PUSH
 #include <boost/asio.hpp>
 #include <boost/asio/co_spawn.hpp>
 #include <boost/bind/bind.hpp>
 #include <boost/asio/experimental/awaitable_operators.hpp>
+
 #include <coroutine>
 #include <functional>
 #include <vector>

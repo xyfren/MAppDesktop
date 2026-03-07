@@ -1,12 +1,15 @@
 ﻿#pragma once
 
+#define BOOST_ASIO_DISABLE_WARNING_PUSH
 #include <boost/asio.hpp>
 #include <boost/bind/bind.hpp>
+
 #include <functional>
 #include <vector>
 #include <memory>
 #include <set>
 #include <mutex>
+#include <span>
 
 #include "DPacket.h"
 #include "FPacket.h"
@@ -22,10 +25,10 @@ public:
     ~DataServer();
 
     void run(uint16_t port);
-    void send(const vector<uint8_t>& data, const boost::asio::ip::udp::endpoint& targetEndpoint);
-    void sendFPacket(shared_ptr<FPacket> packet, const boost::asio::ip::udp::endpoint& targetEndpoint);
+    void send(const vector<uint8_t>& data, const udp::endpoint& targetEndpoint);
+    void sendFPacket(shared_ptr<FPacket> packet, const udp::endpoint& targetEndpoint);
 
-    void sendFrame(const vector<uint8_t>& frameData, boost::asio::ip::udp::endpoint& targetEndpoint);
+    void sendFrame(span<uint8_t>& frameData, const udp::endpoint& targetEndpoint);
 
     void setMessageHandler(function<void(const vector<uint8_t>& data, const udp::endpoint& fromEndpoint)> messageHandler);
 private:

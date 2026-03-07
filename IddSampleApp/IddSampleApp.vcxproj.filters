@@ -32,7 +32,12 @@
     <ClCompile Include="MServer.cpp">
       <Filter>Server</Filter>
     </ClCompile>
-    <ClCompile Include="FrameManager.cpp" />
+    <ClCompile Include="JpegCoder.cpp">
+      <Filter>FrameManager</Filter>
+    </ClCompile>
+    <ClCompile Include="FrameManager.cpp">
+      <Filter>FrameManager</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="APacket.h">
@@ -67,6 +72,11 @@
     <ClInclude Include="FPacket.h">
       <Filter>Server</Filter>
     </ClInclude>
-    <ClInclude Include="FrameManager.h" />
+    <ClInclude Include="JpegCoder.h">
+      <Filter>FrameManager</Filter>
+    </ClInclude>
+    <ClInclude Include="FrameManager.h">
+      <Filter>FrameManager</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
