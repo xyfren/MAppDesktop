@@ -126,7 +126,6 @@ namespace Microsoft
             std::wstring m_sharedTextureName2;
             
             std::unique_ptr<SwapChainProcessor> m_ProcessingThread;
-            VideoBuffer* m_pVideoBuffer;
         };
 
         class IndirectDeviceContext

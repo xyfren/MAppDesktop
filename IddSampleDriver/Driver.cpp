@@ -757,16 +757,11 @@ IndirectMonitorContext::IndirectMonitorContext(_In_ IDDCX_MONITOR Monitor, _In_ 
     m_sharedMemoryName = pRequest->sharedMemoryName;
     m_sharedTextureName1 = pRequest->sharedTextureName1;
     m_sharedTextureName2 = pRequest->sharedTextureName2;
-
-    m_pVideoBuffer = nullptr;
-
 }
 
 IndirectMonitorContext::~IndirectMonitorContext()
 {
     m_ProcessingThread.reset();
-    if (m_pVideoBuffer)
-        delete m_pVideoBuffer;
 }
 
 IDDCX_MONITOR IndirectMonitorContext::GetMonitorHandle() const
@@ -792,12 +787,12 @@ void IndirectMonitorContext::AssignSwapChain(IDDCX_SWAPCHAIN SwapChain, LUID Ren
     }
     else
     {
-        m_pVideoBuffer = new VideoBuffer(m_Config.width, m_Config.height, m_Config.byteDepth);
-        if (!m_pVideoBuffer->Initialize(Device->Device,m_frameReadyName.c_str(),m_frameProcessedName.c_str(),m_sharedMemoryName.c_str(),m_sharedTextureName1.c_str(),m_sharedTextureName2.c_str())) {
+        VideoBuffer* pVideoBuffer = new VideoBuffer(m_Config.width, m_Config.height, m_Config.byteDepth);
+        if (!pVideoBuffer->Initialize(Device->Device,m_frameReadyName.c_str(),m_frameProcessedName.c_str(),m_sharedMemoryName.c_str(),m_sharedTextureName1.c_str(),m_sharedTextureName2.c_str())) {
             DRV_LOG("m_pVideoBuffer->Initialize error");
             return ;
         }
-        m_ProcessingThread.reset(new SwapChainProcessor(SwapChain, Device, NewFrameEvent,m_pVideoBuffer));
+        m_ProcessingThread.reset(new SwapChainProcessor(SwapChain, Device, NewFrameEvent, pVideoBuffer));
     }
 }
 
@@ -806,8 +801,6 @@ void IndirectMonitorContext::UnassignSwapChain()
     DRV_LOG("UnassignSwapChain");
     // Stop processing the last swap-chain
     m_ProcessingThread.reset();
-    if (m_pVideoBuffer)
-        delete m_pVideoBuffer;
 }
 
 #pragma endregion
