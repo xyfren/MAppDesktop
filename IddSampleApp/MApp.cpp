@@ -98,7 +98,7 @@ void MApp::createMonitorCallback(MonitorConfig config, std::shared_ptr<MClient> 
 		config.enabled = true;
 
 		std::shared_ptr<Monitor> newMonitor = make_shared<Monitor>(config);
-		newMonitor->setFrameCallback(bind(&MApp::sendFrameCallback, this, placeholders::_1, placeholders::_2, placeholders::_3, placeholders::_4));
+		newMonitor->setFrameCallback(bind(&MApp::sendFrameCallback, this, placeholders::_1, placeholders::_2, placeholders::_3, placeholders::_4, placeholders::_5));
 		
 		m_MonitorClient.insert({newMonitor,client});
 		m_MonitorFrameManager[newMonitor] = std::make_shared<FrameManager>(config);
@@ -123,7 +123,7 @@ void MApp::testSend(std::shared_ptr<MClient> client) {
 		std::cerr << "Could not load PNG file" << std::endl;
 		return ;
 	}
-	sendFrameCallback(m_MonitorClient.right.at(client), 0,width*height*channels,imgData);
+	sendFrameCallback(m_MonitorClient.right.at(client), 0,width*height*channels,0,imgData);
 	stbi_image_free(imgData);
 }
 
@@ -142,15 +142,14 @@ void MApp::removeMonitorCallback(std::shared_ptr<MClient> client) {
 	}
 }
 
-void MApp::sendFrameCallback(std::shared_ptr<Monitor> pMonitor, uint32_t frameId, uint32_t frameSize, void* frameData) {
-	cout << "send frame" << endl;
+void MApp::sendFrameCallback(std::shared_ptr<Monitor> pMonitor, uint32_t frameId, uint32_t frameSize, uint32_t rowPitch, void* frameData) {
 	std::span<uint8_t> inputBuffer((uint8_t*)frameData, frameSize);
 	std::span<uint8_t> outputBuffer;
 	std::mutex* outputMutex = nullptr;
 	{
 		lock_guard<mutex> lock(monitorMutex);
 		std::shared_ptr<FrameManager> frameManager = m_MonitorFrameManager.at(pMonitor);
-		int r = frameManager->createFrameBuffer(frameId, inputBuffer, &outputMutex, outputBuffer);	
+		int r = frameManager->createFrameBuffer(frameId, rowPitch, inputBuffer, &outputMutex, outputBuffer);
 		
 		if (r != 0) {
 			return;

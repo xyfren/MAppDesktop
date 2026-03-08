@@ -55,10 +55,10 @@ void MServer::broadcastMessage(const string& msg) {
         try {
             if (socket and socket->is_open()) {
                 m_connectionServer->send(tcpbytes, socket);
-                if (client.state == MClient::State::Authorized) {
+                if (client->state == MClient::State::Authorized) {
                     boost::asio::ip::tcp::endpoint tcp_ep = socket->remote_endpoint();
-                    boost::asio::ip::udp::endpoint targetEndpoint(tcp_ep.address(),client.udpPort);
-                    m_dataServer->send(udpbytes, client.targetEndpoint);
+                    boost::asio::ip::udp::endpoint targetEndpoint(tcp_ep.address(),client->udpPort);
+                    m_dataServer->send(udpbytes, client->targetEndpoint);
                 }
             }
         }
@@ -75,10 +75,9 @@ void MServer::sendFrame(span<uint8_t> frameData, std::mutex* frameMutex, const u
 }
 
 void MServer::onOpen(shared_ptr<tcp::socket> socket) {
-    MClient client(socket);
     {
         lock_guard<mutex> lock(m_clientsMutex);
-        m_clients[socket] = client;
+        m_clients[socket] = make_shared<MClient>(socket);
     }
     cout << "Новый клиент подключён (" << m_clients.size() << " активных)" << endl;
 }
@@ -93,25 +92,25 @@ void MServer::onMessageC(const vector<uint8_t>& data, shared_ptr<tcp::socket> so
         cout << "Клиаент авторизован" << endl;
         {
             lock_guard<mutex> lock(m_clientsMutex);
-            m_clients[socket].udpPort = pack.udpPort;
+            m_clients[socket]->udpPort = pack.udpPort;
             // Add udp endpoint to MClient 
             boost::asio::ip::tcp::endpoint tcp_ep = socket->remote_endpoint();
             boost::asio::ip::udp::endpoint targetEndpoint(tcp_ep.address(), pack.udpPort);
-            m_clients[socket].targetEndpoint = targetEndpoint;
+            m_clients[socket]->targetEndpoint = targetEndpoint;
 
-            m_clients[socket].state = MClient::State::Authorized;
+            m_clients[socket]->state = MClient::State::Authorized;
         }
         MonitorConfig config;
-		config.width = 1920;
-        config.height = 1080;
-		config.refreshRate = pack.refreshRate;
+		config.width = pack.height;
+        config.height = pack.width;
+		config.refreshRate = 30;
 
-        m_createMonitorCallback(config,make_shared<MClient>(m_clients.at(socket)));
+        m_createMonitorCallback(config,m_clients.at(socket));
     }
 }
 
 void MServer::onClose(shared_ptr<tcp::socket> socket) {
-    m_removeMonitorCallback(make_shared<MClient>(m_clients.at(socket)));
+    m_removeMonitorCallback(m_clients.at(socket));
     {
         lock_guard<mutex> lock(m_clientsMutex);
         m_clients.erase(socket);

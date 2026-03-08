@@ -186,6 +186,7 @@ Monitor::Monitor(const MonitorConfig& config):
     m_running(false),
     m_threadFinished(false)
 {
+   
 }
 
 Monitor::~Monitor() {
@@ -201,11 +202,11 @@ Monitor::~Monitor() {
 }
 
 void Monitor::setID3D11Device(ID3D11Device* device) {
-	m_device.Attach(device);
+    m_device = device;
 }
 
 void Monitor::setID3D11DeviceContext(ID3D11DeviceContext* context) {
-	m_context.Attach(context);
+    m_context = context;
 }
 
 void Monitor::setFrameCallback(SendFrameCallback sendFrameCallback) {
@@ -218,6 +219,22 @@ bool Monitor::Initialize(const wchar_t* frameReadyName,
                          const wchar_t* sharedTextureName1, 
                          const wchar_t* sharedTextureName2)
 {
+    D3D11_TEXTURE2D_DESC stagingDesc = {};
+    stagingDesc.Width = m_Config.width;
+    stagingDesc.Height = m_Config.height;
+    stagingDesc.MipLevels = 1;
+    stagingDesc.ArraySize = 1;
+    stagingDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+    stagingDesc.SampleDesc.Count = 1;
+    stagingDesc.Usage = D3D11_USAGE_STAGING; // Специальный тип памяти для передачи на CPU
+    stagingDesc.BindFlags = 0; // Staging не может быть Render Target
+    stagingDesc.MiscFlags = 0; // Staging нельзя расшарить между процессами
+    stagingDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ; // Разрешаем чтение процессору
+
+    HRESULT hr = m_device->CreateTexture2D(&stagingDesc, nullptr, &m_stagingTexture);
+    if (FAILED(hr)) {
+        printf("Failed to create staging texture: 0x%08X\n", hr);
+    }
 
     //m_gDisplay = new GpuDisplay(m_Config.width, m_Config.height, m_device.Get(), m_context.Get());
 
@@ -253,19 +270,28 @@ void Monitor::Run() {
             ResetEvent(m_pVideoBuffer->GetFrameReadyEvent());
             auto frame = m_pVideoBuffer->GetLatestFrame();
 
-            std::cout << "Новый кадр " << "id = " << frame.frameId <<"; idx = " << frame.bufferIdx << std::endl;
+            //std::cout << "Новый кадр " << "id = " << frame.frameId <<"; idx = " << frame.bufferIdx << std::endl;
+            D3D11_TEXTURE2D_DESC desk;
+            frame.texture->GetDesc(&desk);
 
+
+            m_context->CopyResource(m_stagingTexture.Get(), frame.texture);
+
+            // 2. Мапим Staging-текстуру
             D3D11_MAPPED_SUBRESOURCE mappedResource;
-
-            HRESULT hr = m_context->Map(frame.texture, 0, D3D11_MAP_READ, 0, &mappedResource);
-
+            HRESULT hr = m_context->Map(m_stagingTexture.Get(), 0, D3D11_MAP_READ, 0, &mappedResource);
+            
             if (SUCCEEDED(hr))
             {
-                printf("Mapped texture succ\n");
 
-                m_sendFrameCallback(shared_from_this(), frame.frameId, frame.size, mappedResource.pData);
+                UINT rowPitch = mappedResource.RowPitch;
+
+                m_sendFrameCallback(shared_from_this(), frame.frameId, frame.size, rowPitch, mappedResource.pData);
 
                 m_context->Unmap(frame.texture, 0);
+            }
+            else {
+				printf("Failed to map texture. Error: 0x%lx\n", hr);
             }
 
             m_pVideoBuffer->MarkFrameProcessed();

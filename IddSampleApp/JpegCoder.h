@@ -12,7 +12,7 @@ public:
 	JpegCoder(MonitorConfig& config);
 	~JpegCoder();
 
-	int encodeToJpeg(const uint8_t* inputBuffer, uint8_t** outputBuffer, unsigned long* outputSize);
+	int encodeToJpeg(const uint8_t* inputBuffer, uint32_t rowPitch, uint8_t** outputBuffer, unsigned long* outputSize);
 
 private:
 	tjhandle m_compressor;

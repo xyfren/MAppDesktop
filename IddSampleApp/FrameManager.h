@@ -11,7 +11,7 @@ public:
 	FrameManager(MonitorConfig& m_config);
 	~FrameManager();
 
-	int createFrameBuffer(uint32_t frameId,std::span<uint8_t>& inputBuffer,std::mutex** ppOutputMutex, std::span<uint8_t>& outputBuffer);
+	int createFrameBuffer(uint32_t frameId, uint32_t rowPitch, std::span<uint8_t>& inputBuffer,std::mutex** ppOutputMutex, std::span<uint8_t>& outputBuffer);
 
 private:
 

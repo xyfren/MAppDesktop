@@ -46,5 +46,8 @@ private:
     std::atomic<size_t> m_framesSent{ 0 };
     std::atomic<size_t> m_packetsSent{ 0 };
     std::atomic<size_t> m_bytesSent{ 0 };
+
+    std::atomic<int> m_packetsInFlight{ 0 };
+    std::mutex m_sendMutex;
 };
 

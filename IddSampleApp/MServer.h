@@ -51,5 +51,5 @@ private:
 	DataServer* m_dataServer;
 
 	mutex m_clientsMutex;
-	map<shared_ptr<tcp::socket>,MClient> m_clients;
+	map<shared_ptr<tcp::socket>,shared_ptr<MClient>> m_clients;
 };

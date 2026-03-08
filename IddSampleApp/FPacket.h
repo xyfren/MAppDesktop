@@ -5,7 +5,7 @@
 #include <iostream>
 
 #define FPACKET_HEADER_SIZE 20
-#define FPACKET_MAX_FRAME_SIZE 32768 // (65536 - 16)
+#define FPACKET_MAX_FRAME_SIZE 16384 // (65536 - 16)
 
 //Frame packet
 #pragma pack(push,1)

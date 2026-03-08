@@ -26,7 +26,7 @@
 
 class Monitor;
 
-using SendFrameCallback = std::function<void(std::shared_ptr<Monitor> pMonitor, uint64_t frameId, uint32_t frameSize, void* frameData)>;
+using SendFrameCallback = std::function<void(std::shared_ptr<Monitor> pMonitor, uint64_t frameId, uint32_t frameSize, uint32_t rowPitch, void* frameData)>;
 
 class Monitor: public std::enable_shared_from_this<Monitor> {
 public:
@@ -53,6 +53,8 @@ private:
     GpuDisplay* m_gDisplay;
     Microsoft::WRL::ComPtr<ID3D11Device> m_device;
     Microsoft::WRL::ComPtr<ID3D11DeviceContext> m_context;
+
+    Microsoft::WRL::ComPtr<ID3D11Texture2D> m_stagingTexture;
 
     MonitorConfig m_Config;
     VideoBuffer* m_pVideoBuffer;

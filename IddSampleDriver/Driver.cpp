@@ -427,6 +427,7 @@ void SwapChainProcessor::RunCore()
     HRESULT hr = m_Device->Device.As(&DxgiDevice);
     if (FAILED(hr))
     {
+        DRV_LOG("ERROR: Device.As(&DxgiDevice) failed! HRESULT: 0x%08X", hr);
         return;
     }
 
@@ -436,6 +437,7 @@ void SwapChainProcessor::RunCore()
     hr = IddCxSwapChainSetDevice(m_hSwapChain, &SetDevice);
     if (FAILED(hr))
     {
+        DRV_LOG("ERROR: IddCxSwapChainSetDevice failed! HRESULT: 0x%08X", hr);
         return;
     }
 
@@ -808,8 +810,7 @@ void IndirectMonitorContext::UnassignSwapChain()
     DRV_LOG("UnassignSwapChain");
     // Stop processing the last swap-chain
     m_ProcessingThread.reset();
-    if (m_pVideoBuffer)
-        delete m_pVideoBuffer;
+    m_pVideoBuffer = nullptr;
 }
 
 #pragma endregion
@@ -1041,7 +1042,7 @@ NTSTATUS IddSampleParseMonitorDescription(const IDARG_IN_PARSEMONITORDESCRIPTION
             UINT16 vTotal = height + vBlanking;
 
             double refreshRate = (pixelClock * 10000.0) / (hTotal * vTotal); // Частота обновления в герцах
-            DRV_LOG("SCREEN w=%d;h=%d;rate=%d",width,height,refreshRate);
+            DRV_LOG("SCREEN w=%d;h=%d;rate=%d",width,height, (UINT16)refreshRate);
             // Добавляем режим из EDID
             pInArgs->pMonitorModes[modeIndex++] = CreateIddCxMonitorMode(
                 width,

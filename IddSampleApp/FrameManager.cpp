@@ -19,14 +19,14 @@ FrameManager::~FrameManager() {
 
 }
 
-int FrameManager::createFrameBuffer(uint32_t frameId, std::span<uint8_t>& inputBuffer, std::mutex** ppOutputMutex, std::span<uint8_t>& outputBuffer) {
+int FrameManager::createFrameBuffer(uint32_t frameId, uint32_t rowPitch, std::span<uint8_t>& inputBuffer, std::mutex** ppOutputMutex, std::span<uint8_t>& outputBuffer) {
 	int bufferIdx = frameId % 2;
 
 	frameBuffers[bufferIdx].first->lock();
 	uint8_t* pOutputBuffer = frameBuffers[bufferIdx].second.data();
 	unsigned long outputSize = m_config.width * m_config.height * m_config.byteDepth; // Размер буфера веделенного через оператор new в конструкторе FrameManager. TurboJPEG может перевыделить его, если не хватит, но не может выделить новый, если указать nullptr.
 
-	int r = m_pJpegCoder->encodeToJpeg(inputBuffer.data(),&pOutputBuffer, &outputSize);
+	int r = m_pJpegCoder->encodeToJpeg(inputBuffer.data(), rowPitch,&pOutputBuffer, &outputSize);
 	if (r != 0) {
 		std::cerr << "Ошибка кодирования JPEG: " << tjGetErrorStr() << std::endl;
 		frameBuffers[bufferIdx].first->unlock();
