@@ -139,7 +139,7 @@ void VideoBuffer::PushFrame(ID3D11Texture2D* sourceTexture, ID3D11DeviceContext*
 
 void VideoBuffer::MarkFrameProcessed() {
     FrameHeader* header = (FrameHeader*)m_pMappedBuffer;
-    header->bufferProccesed[header->processingBufferIdx];
+    header->bufferProccesed[header->processingBufferIdx] = true;
     SetEvent(m_hFrameProcessedEvent);
 }
 

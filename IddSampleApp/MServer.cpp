@@ -100,10 +100,13 @@ void MServer::onMessageC(const vector<uint8_t>& data, shared_ptr<tcp::socket> so
 
             m_clients[socket]->state = MClient::State::Authorized;
         }
+        RAPacket responsePacket;
+        m_connectionServer->send(responsePacket.bytes(), socket);
+
         MonitorConfig config;
-		config.width = pack.height;
+        config.width = pack.height;
         config.height = pack.width;
-		config.refreshRate = 30;
+        config.refreshRate = 30;
 
         m_createMonitorCallback(config,m_clients.at(socket));
     }
