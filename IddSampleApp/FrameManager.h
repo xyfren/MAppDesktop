@@ -1,6 +1,10 @@
 ﻿#pragma once
 
-#include "JpegCoder.h"
+//#include "JpegCoder.h"
+#include <vector>
+#include <mutex>
+#include <span>
+#include "FFmpegCoder.h"
 #include "../Common.h"
 #include <iostream>
 
@@ -16,7 +20,7 @@ public:
 private:
 
 	MonitorConfig m_config = {};
-	JpegCoder* m_pJpegCoder;
+	FFmpegCoder* m_pFFMpegCoder;
 
 	std::vector<std::pair<std::mutex*, std::span<uint8_t>>> frameBuffers;
 };

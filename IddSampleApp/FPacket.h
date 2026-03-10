@@ -11,6 +11,7 @@
 // byte payload.  Total on-wire size: 20 (FPacket header) + 1300 (data) +
 // 8 (UDP) + 20 (IP) = 1348 bytes — safely below 1500.
 #define FPACKET_MAX_FRAME_SIZE 1300
+#define FPACKET_TYPE_H264  310 
 
 //Frame packet
 #pragma pack(push,1)

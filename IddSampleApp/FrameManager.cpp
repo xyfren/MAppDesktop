@@ -2,7 +2,7 @@
 
 FrameManager::FrameManager(MonitorConfig& m_config) {
 	m_config = m_config;
-	m_pJpegCoder = new JpegCoder(m_config);
+	m_pFFMpegCoder = new FFmpegCoder(m_config);
 	auto mtx1 = new std::mutex();
 	auto mtx2 = new std::mutex();
 
@@ -21,11 +21,11 @@ FrameManager::FrameManager(MonitorConfig& m_config) {
 FrameManager::~FrameManager() {
 	for (auto& [mtx, span] : frameBuffers) {
 		if (span.data()) {
-			tjFree(span.data());
+			free(span.data());
 		}
 		delete mtx;
 	}
-	delete m_pJpegCoder;
+	delete m_pFFMpegCoder;
 }
 
 int FrameManager::createFrameBuffer(uint32_t frameId, uint32_t rowPitch, std::span<uint8_t>& inputBuffer, std::mutex** ppOutputMutex, std::span<uint8_t>& outputBuffer) {
@@ -33,15 +33,15 @@ int FrameManager::createFrameBuffer(uint32_t frameId, uint32_t rowPitch, std::sp
 
 	frameBuffers[bufferIdx].first->lock();
 	uint8_t* pOutputBuffer = frameBuffers[bufferIdx].second.data();
-	unsigned long outputSize = static_cast<unsigned long>(frameBuffers[bufferIdx].second.size());
+	size_t outputSize = frameBuffers[bufferIdx].second.size();
 
-	int r = m_pJpegCoder->encodeToJpeg(inputBuffer.data(), rowPitch,&pOutputBuffer, &outputSize);
+	int r = m_pFFMpegCoder->encodeFrame(inputBuffer.data(), rowPitch,&pOutputBuffer, &outputSize);
 	if (r != 0) {
-		std::cerr << "Ошибка кодирования JPEG: " << tjGetErrorStr() << std::endl;
+		std::cerr << "Ошибка кодирования H.264: " << r << std::endl;
 		frameBuffers[bufferIdx].first->unlock();
 		return r;
 	}
-	// Update the span in case TurboJPEG reallocated the buffer.
+
 	frameBuffers[bufferIdx].second = std::span<uint8_t>(pOutputBuffer, outputSize);
 	frameBuffers[bufferIdx].first->unlock();
 

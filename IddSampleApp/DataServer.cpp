@@ -118,7 +118,7 @@ void DataServer::sendFrame(span<uint8_t>& frameData, const udp::endpoint& target
 
         // Создаём пакет (единственное копирование данных!)
         auto packet = std::make_shared<FPacket>();
-        packet->type = 300;
+        packet->type = FPACKET_TYPE_H264;
         packet->frameId = frameNumber;
 
         packet->totalParts = totalPackets;
