@@ -934,7 +934,7 @@ void VideoBuffer::PushFrame(ID3D11Texture2D* sourceTexture, ID3D11DeviceContext*
     }
 
     // Ensure GPU copy is complete before signaling the app
-    m_context->Flush();
+    //m_context->Flush();
 
     header->frameId = frameId;
     header->timestamp = timestamp;
