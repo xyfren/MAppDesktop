@@ -9,12 +9,12 @@ FrameManager::FrameManager(MonitorConfig& m_config) {
 	// Allocate with tjAlloc so that TurboJPEG can safely realloc/free these
 	// buffers if the encoded JPEG ever exceeds the pre-allocated size.
 	unsigned long bufSize = m_config.width * m_config.height * m_config.byteDepth;
-	uint8_t* buf1 = tjAlloc(bufSize);
-	uint8_t* buf2 = tjAlloc(bufSize);
+	uint8_t* buf1 = new uint8_t[bufSize];
+	uint8_t* buf2 = new uint8_t[bufSize];
 	std::span<uint8_t> buffer1Span(buf1, bufSize);
 	std::span<uint8_t> buffer2Span(buf2, bufSize);
 
-	frameBuffers.push_back({ mtx1,buffer1Span});
+	frameBuffers.push_back({ mtx1,buffer1Span });
 	frameBuffers.push_back({ mtx2,buffer2Span });
 }
 

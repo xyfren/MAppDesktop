@@ -18,7 +18,7 @@ int JpegCoder::encodeToJpeg(const uint8_t* inputBuffer, uint32_t rowPitch, uint8
         outputSize,           // Сюда запишется итоговый размер
         TJSAMP_420,
         75,
-        TJFLAG_FASTDCT   // NOREALLOC убран: разрешаем TurboJPEG перевыделять буфер при необходимости
+        TJFLAG_FASTDCT | TJFLAG_NOREALLOC   // NOREALLOC убран: разрешаем TurboJPEG перевыделять буфер при необходимости
     );
 
     return result; // 0 — успех
