@@ -5,12 +5,20 @@
 #include <iostream>
 
 #define FPACKET_HEADER_SIZE 20
-#define FPACKET_MAX_FRAME_SIZE 16384 // (65536 - 16)
+// Keep each UDP datagram well below the typical Ethernet MTU of 1500 bytes to
+// avoid IP-level fragmentation.  A single lost IP fragment drops the entire
+// datagram, which was the primary source of frame losses with the old 16384-
+// byte payload.  Total on-wire size: 20 (FPacket header) + 1300 (data) +
+// 8 (UDP) + 20 (IP) = 1348 bytes — safely below 1500.
+#define FPACKET_MAX_FRAME_SIZE 1300
 
 //Frame packet
+// Packet type IDs sent in FPacket::type.
+#define FPACKET_TYPE_H264  310  // Frame data is H.264 NAL units (current codec)
+
 #pragma pack(push,1)
 struct FPacket {
-    uint16_t type = 300;
+    uint16_t type = FPACKET_TYPE_H264;
     uint64_t frameId = 0;
     
     uint16_t totalParts = 0;

@@ -17,8 +17,8 @@ int JpegCoder::encodeToJpeg(const uint8_t* inputBuffer, uint32_t rowPitch, uint8
         outputBuffer,            // Двойной указатель: сюда запишется адрес новой памяти
         outputSize,           // Сюда запишется итоговый размер
         TJSAMP_420,
-        10,
-        TJFLAG_FASTDCT | TJFLAG_NOREALLOC   // Убираем NOREALLOC, чтобы позволить выделение
+        75,
+        TJFLAG_FASTDCT   // NOREALLOC убран: разрешаем TurboJPEG перевыделять буфер при необходимости
     );
 
     return result; // 0 — успех
