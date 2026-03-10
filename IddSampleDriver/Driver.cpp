@@ -933,8 +933,15 @@ void VideoBuffer::PushFrame(ID3D11Texture2D* sourceTexture, ID3D11DeviceContext*
         m_context->CopyResource(m_texture2.Get(), sourceTexture);
     }
 
+    // Ensure GPU copy is complete before signaling the app
+    m_context->Flush();
+
     header->frameId = frameId;
     header->timestamp = timestamp;
+
+    // Memory barrier to ensure all writes to the shared header are visible
+    // to the app process before it reads freshBufferIdx
+    MemoryBarrier();
     header->freshBufferIdx = writeBuffer;
 
     SetEvent(m_hFrameReadyEvent);

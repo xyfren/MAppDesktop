@@ -253,8 +253,8 @@ void Monitor::Run() {
    
             m_pVideoBuffer->MarkFrameProcessed();
 
-            //if (!m_gDisplay->ProcessEvents())
-            //    m_running = false;
+            if (!m_gDisplay->ProcessEvents())
+                m_running = false;
 
             break;
         }

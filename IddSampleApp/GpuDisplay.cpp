@@ -37,7 +37,7 @@ bool GpuDisplay::Initialize()
     scd.BufferDesc.Width = m_width;
     scd.BufferDesc.Height = m_height;
     scd.BufferDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
-    scd.BufferDesc.RefreshRate.Numerator = 120;
+    scd.BufferDesc.RefreshRate.Numerator = refreshRate;
     scd.BufferDesc.RefreshRate.Denominator = 1;
     scd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
     scd.OutputWindow = hwnd;
@@ -74,9 +74,19 @@ bool GpuDisplay::ShowFrame(ID3D11Texture2D* frameTexture) {
         return false;
     }
 
+    // Re-acquire back buffer before each frame (required for FLIP_DISCARD swap effect,
+    // because after Present() the internal buffer rotates and the old reference becomes stale)
+    m_backBuffer.Reset();
+    HRESULT hr = m_swapChain->GetBuffer(0, IID_PPV_ARGS(&m_backBuffer));
+    if (FAILED(hr)) {
+        printf("GetBuffer failed: 0x%08X\n", hr);
+        return false;
+    }
+
     m_context->CopyResource(m_backBuffer.Get(), frameTexture);
-    //m_context->Flush();
-    HRESULT hr = m_swapChain->Present(0, 0);
+
+    // Present with VSync (SyncInterval=1) for smooth, consistent frame pacing
+    hr = m_swapChain->Present(1, 0);
     if (FAILED(hr)) {
         printf("Present failed: 0x%08X\n", hr);
         return false;
