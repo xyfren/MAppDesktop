@@ -897,6 +897,7 @@ void VideoBuffer::PushFrame(ID3D11Texture2D* sourceTexture, ID3D11DeviceContext*
 
     if (header->bufferProccesed[writeBuffer]) {
         header->bufferProccesed[writeBuffer] = false;
+        //DRV_LOG("NO_WAIT");
     }
     else {
         DWORD waitResult = WaitForSingleObject(
@@ -906,6 +907,7 @@ void VideoBuffer::PushFrame(ID3D11Texture2D* sourceTexture, ID3D11DeviceContext*
         {
         case WAIT_OBJECT_0:
         {
+            DRV_LOG("WAIT_SUCC");
             header->bufferProccesed[writeBuffer] = false;
             ResetEvent(m_hFrameProcessedEvent);
             break;
@@ -913,6 +915,7 @@ void VideoBuffer::PushFrame(ID3D11Texture2D* sourceTexture, ID3D11DeviceContext*
         case WAIT_TIMEOUT:
         {
             header->bufferProccesed[writeBuffer] = true;
+            DRV_LOG("WAIT_TIMEOUT");
             break;
         }
         default:

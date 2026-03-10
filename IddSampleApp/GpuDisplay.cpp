@@ -43,7 +43,7 @@ bool GpuDisplay::Initialize()
     scd.OutputWindow = hwnd;
     scd.SampleDesc.Count = 1;
     scd.Windowed = TRUE;
-    //scd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD; // лучше для производительности
+    scd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD; // лучше для производительности
     scd.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
 
     Microsoft::WRL::ComPtr<IDXGIDevice> dxgiDevice;

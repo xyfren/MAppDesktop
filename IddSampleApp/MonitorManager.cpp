@@ -235,7 +235,7 @@ void Monitor::Run() {
     {
         DWORD waitResult = WaitForSingleObject(
             m_pVideoBuffer->GetFrameReadyEvent(),
-            50
+			1000
         );
 
         if (!m_running) {
@@ -253,8 +253,8 @@ void Monitor::Run() {
    
             m_pVideoBuffer->MarkFrameProcessed();
 
-            if (!m_gDisplay->ProcessEvents())
-                m_running = false;
+            //if (!m_gDisplay->ProcessEvents())
+            //    m_running = false;
 
             break;
         }

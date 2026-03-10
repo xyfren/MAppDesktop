@@ -138,7 +138,7 @@ void VideoBuffer::PushFrame(ID3D11Texture2D* sourceTexture, ID3D11DeviceContext*
 
 void VideoBuffer::MarkFrameProcessed() {
     FrameHeader* header = (FrameHeader*)m_pMappedBuffer;
-    header->bufferProccesed[header->processingBufferIdx];
+    header->bufferProccesed[header->processingBufferIdx] = true;
     SetEvent(m_hFrameProcessedEvent);
 }
 
@@ -148,8 +148,10 @@ VideoBuffer::Frame VideoBuffer::GetLatestFrame()
 
     if (!m_pMappedBuffer) return frame;
     FrameHeader* header = (FrameHeader*)m_pMappedBuffer;
+    
 
     header->processingBufferIdx = header->freshBufferIdx;
+    header->bufferProccesed[header->processingBufferIdx] = false;
     frame.texture = (header->processingBufferIdx == 0) ? m_texture1.Get() : m_texture2.Get();
     frame.width = header->width;
     frame.height = header->height;
