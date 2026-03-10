@@ -96,11 +96,13 @@ void DataServer::sendFPacket(shared_ptr<FPacket> packet, const udp::endpoint& ta
 
 void DataServer::sendFrame(span<uint8_t>& frameData, const udp::endpoint& targetEndpoint) {
 
-    if (m_packetsInFlight > 0) {
-        cout << "Bro Slow" << endl;
-        //return;
+    // Drop frame if the previous one is still being sent to avoid growing the
+    // kernel send-buffer without bound (back-pressure / frame-dropping policy).
+    const int MAX_PACKETS_IN_FLIGHT = 50;
+    if (m_packetsInFlight > MAX_PACKETS_IN_FLIGHT) {
+        return;
     }
-    
+
     uint32_t totalPackets = (frameData.size() + FPACKET_MAX_FRAME_SIZE - 1) / FPACKET_MAX_FRAME_SIZE;
 
     m_packetsInFlight = totalPackets;
@@ -139,13 +141,9 @@ void DataServer::handleSendResult(boost::system::error_code ec, size_t bytes_sen
     if (ec) {
         cerr << "Ошибка отправки UDP данных: " << ec.message() << endl;
 
-        // Можно добавить дополнительную обработку ошибок, например:
         if (ec == boost::asio::error::connection_refused) {
             cerr << "Соединение отклонено удаленным хостом" << endl;
         }
-    }
-    else {
-        cout << "Отправлено " << bytes_sent << " байт" << endl;
     }
 }
 

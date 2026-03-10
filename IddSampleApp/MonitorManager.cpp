@@ -288,7 +288,7 @@ void Monitor::Run() {
 
                 m_sendFrameCallback(shared_from_this(), frame.frameId, frame.size, rowPitch, mappedResource.pData);
 
-                m_context->Unmap(frame.texture, 0);
+                m_context->Unmap(m_stagingTexture.Get(), 0);
             }
             else {
 				printf("Failed to map texture. Error: 0x%lx\n", hr);
