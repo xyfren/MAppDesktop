@@ -106,7 +106,7 @@ void MServer::onMessageC(const vector<uint8_t>& data, shared_ptr<tcp::socket> so
         MonitorConfig config;
         config.width = pack.height;
         config.height = pack.width;
-        config.refreshRate = 30;
+        config.refreshRate = 60;
 
         m_createMonitorCallback(config,m_clients.at(socket));
     }

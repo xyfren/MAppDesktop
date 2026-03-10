@@ -936,6 +936,10 @@ void VideoBuffer::PushFrame(ID3D11Texture2D* sourceTexture, ID3D11DeviceContext*
 
     header->frameId = frameId;
     header->timestamp = timestamp;
+
+    // Memory barrier to ensure all writes to the shared header are visible
+    // to the app process before it reads freshBufferIdx
+    MemoryBarrier();
     header->freshBufferIdx = writeBuffer;
 
     SetEvent(m_hFrameReadyEvent);
