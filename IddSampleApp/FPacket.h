@@ -13,9 +13,12 @@
 #define FPACKET_MAX_FRAME_SIZE 1300
 
 //Frame packet
+// Packet type IDs sent in FPacket::type.
+#define FPACKET_TYPE_H264  310  // Frame data is H.264 NAL units (current codec)
+
 #pragma pack(push,1)
 struct FPacket {
-    uint16_t type = 300;
+    uint16_t type = FPACKET_TYPE_H264;
     uint64_t frameId = 0;
     
     uint16_t totalParts = 0;
