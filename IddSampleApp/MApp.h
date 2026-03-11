@@ -21,7 +21,7 @@ public:
 	void createMonitorCallback(MonitorConfig config, std::shared_ptr<MClient> client);
 	void removeMonitorCallback(std::shared_ptr<MClient> client);
 
-	void sendFrameCallback(std::shared_ptr<Monitor> pMonitor, uint32_t frameId,uint32_t frameSize, uint32_t rowPitch, void* frameData);
+	void sendFrameCallback(std::shared_ptr<Monitor> pMonitor, uint64_t frameId, uint32_t frameSize, uint32_t rowPitch, void* frameData);
 
 	void testSend(std::shared_ptr<MClient> client);
 

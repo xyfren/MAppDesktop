@@ -12,7 +12,7 @@
 #include <span>
 
 #include "DPacket.h"
-#include "FPacket.h"
+#include "SPacket.h"
 
 using namespace std;
 
@@ -26,9 +26,12 @@ public:
 
     void run(uint16_t port);
     void send(const vector<uint8_t>& data, const udp::endpoint& targetEndpoint);
-    void sendFPacket(shared_ptr<FPacket> packet, const udp::endpoint& targetEndpoint);
 
-    void sendFrame(span<uint8_t>& frameData, const udp::endpoint& targetEndpoint);
+    // Send a pre-fragmented sequence of SPackets for one encoded video frame.
+    // Uses a single shared allocation per frame batch to avoid per-packet heap
+    // overhead.  Drops the entire frame if too many packets are already in flight
+    // (back-pressure / frame-drop policy).
+    void sendSPackets(std::span<const SPacket> packets, const udp::endpoint& targetEndpoint);
 
     void setMessageHandler(function<void(const vector<uint8_t>& data, const udp::endpoint& fromEndpoint)> messageHandler);
 
@@ -50,6 +53,5 @@ private:
     std::atomic<size_t> m_bytesSent{ 0 };
 
     std::atomic<int> m_packetsInFlight{ 0 };
-    std::mutex m_sendMutex;
 };
 

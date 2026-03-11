@@ -8,35 +8,32 @@ extern "C" {
 }
 
 #include <cstdint>
-#include <cstddef>
+#include <span>
 #include "../Common.h"
 
 // Encodes raw BGRA frames to H.264 using FFmpeg (libx264).
 //
-// Every frame is encoded as an intra (I) frame so that each encoded packet can
-// be decoded independently on the receiver side — matching the JPEG semantics
-// of the original JpegCoder but with significantly better compression.
+// Every frame is encoded as an intra (I-frame) so that each encoded packet can
+// be decoded independently — no inter-frame state is required on the receiver.
 //
-// The receiver must be updated to decode H.264 data instead of JPEG.
-class FFmpegCoder
+// The encode() method returns a span pointing directly into the internal
+// AVPacket buffer.  No external allocation or memcpy is performed; the span is
+// valid until the next call to encode().
+class FFmpegEncoder
 {
 public:
-    explicit FFmpegCoder(const MonitorConfig& config);
-    ~FFmpegCoder();
+    explicit FFmpegEncoder(const MonitorConfig& config);
+    ~FFmpegEncoder();
 
     // Encode one BGRA frame.
     //
-    // inputBgraData : pointer to BGRA pixel data.
-    // rowPitch      : bytes per row (may be > width*4 due to GPU alignment).
-    // outputBuffer  : on entry, *outputBuffer points to a caller-owned buffer of
-    //                 *outputSize bytes.  On success, *outputBuffer is updated to
-    //                 point to the encoded H.264 data and *outputSize is set to
-    //                 the number of bytes written.  The returned pointer remains
-    //                 valid until the next call to encodeFrame().
+    // bgraData  : pointer to BGRA pixel data (width * height * 4 bytes minimum).
+    // rowPitch  : bytes per row (may be > width*4 due to GPU alignment).
     //
-    // Returns 0 on success, negative FFmpeg error code on failure.
-    int encodeFrame(const uint8_t* inputBgraData, uint32_t rowPitch,
-                    uint8_t** outputBuffer, size_t* outputSize);
+    // Returns a non-owning span pointing to the encoded H.264 NAL data inside
+    // the internal AVPacket.  The span is valid until the next call to encode()
+    // or until this object is destroyed.  Returns an empty span on failure.
+    std::span<const uint8_t> encode(const uint8_t* bgraData, uint32_t rowPitch);
 
 private:
     bool initialize();

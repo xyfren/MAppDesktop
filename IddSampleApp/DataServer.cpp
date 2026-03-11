@@ -1,11 +1,10 @@
-﻿#include "DataServer.h"
+#include "DataServer.h"
 #include <iostream>
 
 DataServer::DataServer(boost::asio::io_context& ioContext):
     m_ioContext(ioContext)
 {
     m_receiveBuffer = {0};
-
 }
 
 DataServer::~DataServer() {
@@ -20,11 +19,11 @@ void DataServer::run(uint16_t port) {
         udp::endpoint endpoint(udp::v4(), port);
         m_udpSocket->open(endpoint.protocol());
         m_udpSocket->set_option(boost::asio::socket_base::broadcast(true));
-        boost::asio::socket_base::send_buffer_size bufSize(1024 * 1024); // 1 МБ
+        boost::asio::socket_base::send_buffer_size bufSize(1024 * 1024); // 1 MB
         m_udpSocket->set_option(bufSize);
         m_udpSocket->bind(endpoint);
 
-        cout << "Дата сервер запущен на порту " << port << endl;
+        cout << "Data server started on port " << port << endl;
         handleUdpReceive();
     }
     catch (const exception& ex) {
@@ -52,10 +51,8 @@ void DataServer::handleUdpReceive() {
 
 void DataServer::send(const vector<uint8_t>& data, const udp::endpoint& targetEndpoint) {
     if (!m_udpSocket) return;
-    
     if (!m_udpSocket->is_open()) return;
-   
-    // Создаем shared_ptr для продления времени жизни данных
+
     auto sendBuffer = make_shared<vector<uint8_t>>(data);
 
     m_udpSocket->async_send_to(
@@ -67,86 +64,51 @@ void DataServer::send(const vector<uint8_t>& data, const udp::endpoint& targetEn
     );
 }
 
-void DataServer::sendFPacket(shared_ptr<FPacket> packet, const udp::endpoint& targetEndpoint) {
-    if (!m_udpSocket) {
-        std::cerr << "❌ UDP socket not initialized" << std::endl;
+void DataServer::sendSPackets(std::span<const SPacket> packets,
+                              const udp::endpoint& targetEndpoint)
+{
+    if (!m_udpSocket || !m_udpSocket->is_open()) return;
+    if (packets.empty()) return;
+
+    // Drop the frame if the previous one has not finished sending yet.
+    // This provides back-pressure without unbounded kernel-buffer growth.
+    const int MAX_IN_FLIGHT = static_cast<int>(packets.size() * 2);
+    if (m_packetsInFlight > MAX_IN_FLIGHT) {
         return;
     }
 
-    m_udpSocket->async_send_to(
-        boost::asio::buffer(packet->rawData(), FPACKET_HEADER_SIZE + packet->partSize),
-        targetEndpoint,
-        [this, packet](boost::system::error_code ec, size_t bytes_sent) {
-            // packet жив благодаря захвату по значению
-            m_packetsInFlight--;
-            if (ec) {
-                std::cerr << "❌ Send error: " << ec.message() << std::endl;
-            }
-            else {
-                m_packetsSent++; 
-                m_bytesSent += bytes_sent;
+    // Single allocation for the entire frame batch — all async send lambdas
+    // share the same shared_ptr so the data stays alive until every send
+    // completes, without allocating per-packet.
+    auto batch = std::make_shared<std::vector<SPacket>>(packets.begin(), packets.end());
+    m_packetsInFlight += static_cast<int>(batch->size());
 
-                // Можно добавить отладку для последнего пакета кадра
-                if (packet->partId == packet->totalParts - 1) {
-                    //std::cout << "📦 Кадр #" << packet->frameId
-                    //    << " полностью отправлен. Пакетов: " << packet->totalParts
-                    //    << " Статистика: всего пакетов=" << m_packetsSent << std::endl;
+    for (size_t i = 0; i < batch->size(); ++i) {
+        const SPacket* pkt = &(*batch)[i];
+        m_udpSocket->async_send_to(
+            boost::asio::buffer(pkt->rawData(),
+                                SPacket::headerSize() + pkt->dataSize),
+            targetEndpoint,
+            [this, batch](boost::system::error_code ec, size_t bytes_sent) {
+                --m_packetsInFlight;
+                if (ec) {
+                    cerr << "DataServer: send error: " << ec.message() << "\n";
+                } else {
+                    ++m_packetsSent;
+                    m_bytesSent += bytes_sent;
                 }
             }
-        }
-    );
-}
-
-void DataServer::sendFrame(span<uint8_t>& frameData, const udp::endpoint& targetEndpoint) {
-
-    // Drop frame if the previous one is still being sent to avoid growing the
-    // kernel send-buffer without bound (back-pressure / frame-dropping policy).
-    const int MAX_PACKETS_IN_FLIGHT = 50;
-    if (m_packetsInFlight > MAX_PACKETS_IN_FLIGHT) {
-        return;
+        );
     }
-
-    uint32_t totalPackets = (frameData.size() + FPACKET_MAX_FRAME_SIZE - 1) / FPACKET_MAX_FRAME_SIZE;
-
-    m_packetsInFlight = totalPackets;
-
-    static uint32_t frameNumber = 0;
-    
-    // Создаём и отправляем каждый пакет
-    for (uint32_t packetId = 0; packetId < totalPackets; ++packetId) {
-        // Вычисляем смещение и размер для этого пакета
-        size_t offset = packetId * FPACKET_MAX_FRAME_SIZE;
-        size_t remainingSize = frameData.size() - offset;
-        uint16_t packetDataSize = std::min((size_t )FPACKET_MAX_FRAME_SIZE, remainingSize);
-
-        // Создаём пакет (единственное копирование данных!)
-        auto packet = std::make_shared<FPacket>();
-        packet->type = FPACKET_TYPE_H264;
-        packet->frameId = frameNumber;
-
-        packet->totalParts = totalPackets;
-        packet->partId = packetId;
-        packet->partOffset = offset;
-        packet->partSize = packetDataSize;
-        //std::cout << "packet->partId 0" << packet->partId << endl;
-        //std::cout << "packet->partOffset " << packet->partOffset << endl;
-        //std::cout << "packet->partSize " << packet->partSize << endl;
-
-
-        // Копируем данные кадра в пакет
-        std::memcpy(packet->partData, frameData.data() + offset, packetDataSize);
-        sendFPacket(packet, targetEndpoint);
-    }
-    frameNumber++;
+    ++m_framesSent;
 }
 
 void DataServer::handleSendResult(boost::system::error_code ec, size_t bytes_sent) {
-	//printf("Пакет отправлен, байт: %zu\n", bytes_sent);
     if (ec) {
-        cerr << "Ошибка отправки UDP данных: " << ec << endl;
+        cerr << "Error sending UDP data: " << ec << endl;
 
         if (ec == boost::asio::error::connection_refused) {
-            cerr << "Соединение отклонено удаленным хостом" << endl;
+            cerr << "Connection refused by remote host" << endl;
         }
     }
 }
@@ -158,7 +120,7 @@ void DataServer::setMessageHandler(function<void(const vector<uint8_t>& data, co
 std::optional<boost::asio::ip::udp::endpoint> DataServer::getLocalUdpEndpoint() {
     if (!m_udpSocket) {
         return std::nullopt;
-	}
+    }
 
     if (!m_udpSocket->is_open()) {
         return std::nullopt;

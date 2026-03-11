@@ -147,7 +147,7 @@
   <ItemGroup>
     <ClCompile Include="ConnectionServer.cpp" />
     <ClCompile Include="DataServer.cpp" />
-    <ClCompile Include="FFmpegCoder.cpp" />
+    <ClCompile Include="FFmpegEncoder.cpp" />
     <ClCompile Include="FrameManager.cpp" />
     <ClCompile Include="GpuDisplay.cpp" />
     <ClCompile Include="main.cpp" />
@@ -163,7 +163,8 @@
     <ClInclude Include="ConnectionServer.h" />
     <ClInclude Include="DataServer.h" />
     <ClInclude Include="DPacket.h" />
-    <ClInclude Include="FFmpegCoder.h" />
+    <ClInclude Include="FFmpegEncoder.h" />
+    <ClInclude Include="SPacket.h" />
     <ClInclude Include="FPacket.h" />
     <ClInclude Include="FrameManager.h" />
     <ClInclude Include="GpuDisplay.h" />

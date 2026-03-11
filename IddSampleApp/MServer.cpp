@@ -92,11 +92,8 @@ void MServer::broadcastMessage(const string& msg) {
         }
     }
 }
-void MServer::sendFrame(span<uint8_t> frameData, std::mutex* frameMutex, const udp::endpoint& targetEndpoint) {
-    {
-        lock_guard<mutex> lock(*frameMutex);
-        m_dataServer->sendFrame(frameData, targetEndpoint);
-    }
+void MServer::sendSPackets(std::span<const SPacket> packets, const udp::endpoint& targetEndpoint) {
+    m_dataServer->sendSPackets(packets, targetEndpoint);
 }
 
 void MServer::onOpen(shared_ptr<tcp::socket> socket) {

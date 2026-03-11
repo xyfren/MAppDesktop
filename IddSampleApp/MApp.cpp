@@ -177,21 +177,23 @@ void MApp::removeMonitorCallback(std::shared_ptr<MClient> client) {
 	}
 }
 
-void MApp::sendFrameCallback(std::shared_ptr<Monitor> pMonitor, uint32_t frameId, uint32_t frameSize, uint32_t rowPitch, void* frameData) {
-	std::span<uint8_t> inputBuffer((uint8_t*)frameData, frameSize);
-	std::span<uint8_t> outputBuffer;
-	std::mutex* outputMutex = nullptr;
+void MApp::sendFrameCallback(std::shared_ptr<Monitor> pMonitor, uint64_t frameId, uint32_t frameSize, uint32_t rowPitch, void* frameData) {
+	std::shared_ptr<FrameManager> frameManager;
+	udp::endpoint targetEndpoint;
 	{
 		lock_guard<mutex> lock(monitorMutex);
-		std::shared_ptr<FrameManager> frameManager = m_MonitorFrameManager.at(pMonitor);
-		int r = frameManager->createFrameBuffer(frameId, rowPitch, inputBuffer, &outputMutex, outputBuffer);
-		
-		if (r != 0) {
-			return;
-		}
+		auto it = m_MonitorFrameManager.find(pMonitor);
+		if (it == m_MonitorFrameManager.end()) return;
+		frameManager = it->second;
+		targetEndpoint = m_MonitorClient.left.at(pMonitor)->targetEndpoint;
 	}
-	if (outputBuffer.size() > 0) {
-		m_pMServer->sendFrame(outputBuffer, outputMutex, m_MonitorClient.left.at(pMonitor)->targetEndpoint);
+
+	auto packets = frameManager->encodeFrame(
+		frameId, rowPitch,
+		static_cast<const uint8_t*>(frameData), frameSize);
+
+	if (!packets.empty()) {
+		m_pMServer->sendSPackets(packets, targetEndpoint);
 	}
 }
 

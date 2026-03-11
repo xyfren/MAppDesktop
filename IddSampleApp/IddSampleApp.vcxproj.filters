@@ -35,7 +35,7 @@
     <ClCompile Include="FrameManager.cpp">
       <Filter>FrameManager</Filter>
     </ClCompile>
-    <ClCompile Include="FFmpegCoder.cpp">
+    <ClCompile Include="FFmpegEncoder.cpp">
       <Filter>FrameManager</Filter>
     </ClCompile>
   </ItemGroup>
@@ -75,8 +75,11 @@
     <ClInclude Include="FrameManager.h">
       <Filter>FrameManager</Filter>
     </ClInclude>
-    <ClInclude Include="FFmpegCoder.h">
+    <ClInclude Include="FFmpegEncoder.h">
       <Filter>FrameManager</Filter>
+    </ClInclude>
+    <ClInclude Include="SPacket.h">
+      <Filter>Server</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

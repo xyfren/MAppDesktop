@@ -7,6 +7,7 @@
 #include "DataServer.h"
 #include "MClient.h"
 #include "APacket.h"
+#include "SPacket.h"
 #include "../Common.h"
 
 #include <netioapi.h>
@@ -28,7 +29,9 @@ public:
 	void run();
 
 	void broadcastMessage(const string& msg);
-	void sendFrame(span<uint8_t> frameData,std::mutex* frameMutex, const udp::endpoint& targetEndpoint);
+
+	// Send a pre-fragmented sequence of SPackets for one encoded video frame.
+	void sendSPackets(std::span<const SPacket> packets, const udp::endpoint& targetEndpoint);
 
 	void onOpen(shared_ptr<tcp::socket> socket);
 	void onMessageC(const vector<uint8_t>& data, shared_ptr<tcp::socket> socket); // connectionServer message
