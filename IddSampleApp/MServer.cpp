@@ -1,17 +1,21 @@
 ﻿#include "MServer.h"
 
+#pragma comment(lib, "iphlpapi.lib")
+
 MServer::MServer() {
 	m_connectionServer = new ConnectionServer(m_ioContext);
 	m_dataServer = new DataServer(m_ioContext);
 }
 
 MServer::~MServer() {
+    CancelMibChangeNotify2(m_hServerLocalAddressChange);
+
 	delete m_connectionServer;
 	delete m_dataServer;
 }
 
-std::string MServer::getLocalIpAddress(boost::asio::io_context& io_context) {
-    boost::asio::ip::tcp::resolver resolver(io_context);
+std::string MServer::getLocalIpAddress() {
+    boost::asio::ip::tcp::resolver resolver(m_ioContext);
 
     std::string host_name = boost::asio::ip::host_name();
 
@@ -21,15 +25,36 @@ std::string MServer::getLocalIpAddress(boost::asio::io_context& io_context) {
         boost::asio::ip::address addr = endpoint.endpoint().address();
         if (addr.is_v4() && !addr.is_loopback()) {
             return addr.to_string();
-
         }
     }
+    return string();
+}
+
+void WINAPI MServer::OnAddrChange(PMIB_IPINTERFACE_ROW Row, MIB_NOTIFICATION_TYPE NotificationType) {
+    if (NotificationType == MibParameterNotification) {
+        string newAddress = getLocalIpAddress();
+        if (newAddress != "" && newAddress != m_serverLocalAddress) {
+            cout << "Смена локального IP адреса: " << m_serverLocalAddress << " -> " << newAddress << endl;
+			m_serverLocalAddress = newAddress;
+        }
+    }
+        
 }
 
 void MServer::setup(uint16_t connectionPort, uint16_t dataPort) {
+    DWORD ret = NotifyIpInterfaceChange(AF_UNSPEC, [](PVOID context, PMIB_IPINTERFACE_ROW row, MIB_NOTIFICATION_TYPE type) {
+        auto* pApp = static_cast<MServer*>(context);
+        pApp->OnAddrChange(row, type);
+        }, this, TRUE, &m_hServerLocalAddressChange);
+
+    if (ret != NO_ERROR) {
+        printf("Ошибка регистрации: %d\n", ret);
+        return ;
+    }
+    
 	m_connectionPort = connectionPort;
 	m_dataPort = dataPort;
-    m_serverLocalAddress = getLocalIpAddress(m_ioContext);
+    m_serverLocalAddress = getLocalIpAddress();
 
     m_connectionServer->setOpenHandler(bind(&MServer::onOpen, this, placeholders::_1));
     m_connectionServer->setMessageHandler(bind(&MServer::onMessageC, this, placeholders::_1, placeholders::_2));
@@ -104,8 +129,8 @@ void MServer::onMessageC(const vector<uint8_t>& data, shared_ptr<tcp::socket> so
         m_connectionServer->send(responsePacket.bytes(), socket);
 
         MonitorConfig config;
-        config.width = pack.height;
-        config.height = pack.width;
+        config.width = pack.width;
+        config.height = pack.height;
         config.refreshRate = 60;
 
         m_createMonitorCallback(config,m_clients.at(socket));
@@ -123,16 +148,12 @@ void MServer::onClose(shared_ptr<tcp::socket> socket) {
 
 void MServer::onMessageD(const vector<uint8_t>& data, const boost::asio::ip::udp::endpoint& fromEndpoint) {
     string str(data.begin(), data.end());
-    cout << "Новое сообщение: " << str << endl;
-    cout << "Размер: " << data.size() << endl;
     const uint16_t packetType = *(reinterpret_cast<const uint16_t*>(data.data()));
-    cout << "Тип пакета: " << packetType << endl;
     if (packetType == 200) {
-        RDPacket packet;
-        packet.ipAddress = boost::asio::ip::make_address_v4(m_serverLocalAddress).to_uint();
-        packet.connectionPort = m_connectionPort;
-        packet.dataPort = m_dataPort;
-        m_dataServer->send(packet.bytes(), fromEndpoint);
+        cout << "Новое сообщение: " << str << endl;
+        cout << "Размер: " << data.size() << endl;
+
+        cout << "Тип пакета: " << packetType << endl;
     }
 }
 
@@ -142,4 +163,19 @@ void MServer::setCreateMonitorCallback(function<void(MonitorConfig config, share
 
 void MServer::setRemoveMonitorCallback(function<void(shared_ptr<MClient> client)> removeMonitorCallback) {
     m_removeMonitorCallback = removeMonitorCallback;
+}
+
+void MServer::sendRDPacket() {
+    if (m_serverLocalAddress == "") return;
+	if (!m_clients.empty()) return;
+
+    RDPacket packet;
+    packet.ipAddress = boost::asio::ip::make_address_v4(m_serverLocalAddress).to_uint();
+    packet.connectionPort = m_connectionPort;
+    packet.dataPort = m_dataPort;
+    boost::asio::ip::udp::endpoint broadcastEndpoint(
+        boost::asio::ip::address_v4::broadcast(),
+        m_dataPort  // или нужный вам порт
+    );
+    m_dataServer->send(packet.bytes(), broadcastEndpoint);
 }

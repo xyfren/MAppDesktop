@@ -27,6 +27,7 @@ bool MonitorManager::Initialize() {
     if (FAILED(hr)) return false;
 
     if (!ConnectToDriver()) {
+        printf("ConnectToDriver fail\n");
         return false;
     }
     return true;
@@ -151,14 +152,17 @@ bool  MonitorManager::WaitOpenDriver(DWORD intervalMs, DWORD maxTotalTimeMs)
         ULONGLONG elapsed = GetTickCount64() - startTime;
         if (elapsed >= maxTotalTimeMs)
         {
+            printf("Elapsed: [%d]", elapsed);
             break;
         }
 
         if (lastError != ERROR_FILE_NOT_FOUND &&
             lastError != ERROR_PATH_NOT_FOUND &&
             lastError != ERROR_DEVICE_NOT_CONNECTED &&
-            lastError != ERROR_GEN_FAILURE)
+            lastError != ERROR_GEN_FAILURE &&
+            lastError != 433L)
         {
+			printf("Last error: [%d]", lastError);
             break;
         }
 

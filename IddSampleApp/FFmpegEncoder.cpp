@@ -1,22 +1,22 @@
-﻿#include "FFmpegCoder.h"
+﻿#include "FFmpegEncoder.h"
 
 #include <iostream>
 #include <cstring>
 
-FFmpegCoder::FFmpegCoder(const MonitorConfig& config)
+FFmpegEncoder::FFmpegEncoder(const MonitorConfig& config)
     : m_config(config)
 {
     if (!initialize()) {
-        std::cerr << "FFmpegCoder: initialization failed\n";
+        std::cerr << "FFmpegEncoder: initialization failed\n";
     }
 }
 
-FFmpegCoder::~FFmpegCoder()
+FFmpegEncoder::~FFmpegEncoder()
 {
     cleanup();
 }
 
-bool FFmpegCoder::initialize()
+bool FFmpegEncoder::initialize()
 {
     // Prefer the software libx264 encoder for maximum portability and control.
     // If libx264 is not available in the FFmpeg build, fall back to any
@@ -26,19 +26,20 @@ bool FFmpegCoder::initialize()
         codec = avcodec_find_encoder(AV_CODEC_ID_H264);
     }
     if (!codec) {
-        std::cerr << "FFmpegCoder: H.264 encoder not found\n";
+        std::cerr << "FFmpegEncoder: H.264 encoder not found\n";
         return false;
     }
 
     m_codecCtx = avcodec_alloc_context3(codec);
     if (!m_codecCtx) {
-        std::cerr << "FFmpegCoder: avcodec_alloc_context3 failed\n";
+        std::cerr << "FFmpegEncoder: avcodec_alloc_context3 failed\n";
         return false;
     }
 
     m_codecCtx->width        = m_config.width;
     m_codecCtx->height       = m_config.height;
     m_codecCtx->pix_fmt      = AV_PIX_FMT_YUV420P;
+    m_codecCtx->thread_type  = FF_THREAD_SLICE;
     int fps                  = m_config.refreshRate > 0 ? m_config.refreshRate : 60;
     m_codecCtx->time_base    = { 1, fps };
     m_codecCtx->framerate    = { fps, 1 };
@@ -48,13 +49,13 @@ bool FFmpegCoder::initialize()
     m_codecCtx->max_b_frames = 0;
 
     // Low-latency libx264 settings.
-    av_opt_set(m_codecCtx->priv_data, "preset",     "ultrafast",           0);
-    av_opt_set(m_codecCtx->priv_data, "tune",       "zerolatency",         0);
-    // Force all frames to be I-frames and disable scene-cut detection.
-    av_opt_set(m_codecCtx->priv_data, "x264-params","keyint=1:scenecut=0", 0);
+    AVDictionary* param = nullptr;
+    av_dict_set(&param, "preset", "ultrafast", 0);
+    av_dict_set(&param, "tune", "zerolatency", 0);
+    av_dict_set(&param, "x264-params", "keyint=1:scenecut=0", 0);
 
-    if (avcodec_open2(m_codecCtx, codec, nullptr) < 0) {
-        std::cerr << "FFmpegCoder: avcodec_open2 failed\n";
+    if (avcodec_open2(m_codecCtx, codec, &param) < 0) {
+        std::cerr << "FFmpegEncoder: avcodec_open2 failed\n";
         return false;
     }
 
@@ -65,7 +66,7 @@ bool FFmpegCoder::initialize()
     m_yuvFrame->width  = m_config.width;
     m_yuvFrame->height = m_config.height;
     if (av_frame_get_buffer(m_yuvFrame, 0) < 0) {
-        std::cerr << "FFmpegCoder: av_frame_get_buffer failed\n";
+        std::cerr << "FFmpegEncoder: av_frame_get_buffer failed\n";
         return false;
     }
 
@@ -78,14 +79,14 @@ bool FFmpegCoder::initialize()
         m_config.width,  m_config.height, AV_PIX_FMT_YUV420P,
         SWS_BILINEAR, nullptr, nullptr, nullptr);
     if (!m_swsCtx) {
-        std::cerr << "FFmpegCoder: sws_getContext failed\n";
+        std::cerr << "FFmpegEncoder: sws_getContext failed\n";
         return false;
     }
 
     return true;
 }
 
-void FFmpegCoder::cleanup()
+void FFmpegEncoder::cleanup()
 {
     if (m_swsCtx)   { sws_freeContext(m_swsCtx);        m_swsCtx   = nullptr; }
     if (m_packet)   { av_packet_free(&m_packet);         m_packet   = nullptr; }
@@ -93,7 +94,7 @@ void FFmpegCoder::cleanup()
     if (m_codecCtx) { avcodec_free_context(&m_codecCtx); m_codecCtx = nullptr; }
 }
 
-int FFmpegCoder::encodeFrame(const uint8_t* inputBgraData, uint32_t rowPitch,
+int FFmpegEncoder::encodeFrame(const uint8_t* inputBgraData, uint32_t rowPitch,
                               uint8_t** outputBuffer, size_t* outputSize)
 {
     if (!m_codecCtx || !m_yuvFrame || !m_swsCtx || !m_packet) {
@@ -114,34 +115,40 @@ int FFmpegCoder::encodeFrame(const uint8_t* inputBgraData, uint32_t rowPitch,
     // Encode.
     int ret = avcodec_send_frame(m_codecCtx, m_yuvFrame);
     if (ret < 0) {
-        std::cerr << "FFmpegCoder: avcodec_send_frame error " << ret << "\n";
+        std::cerr << "FFmpegEncoder: avcodec_send_frame error " << ret << "\n";
         return ret;
     }
 
-    ret = avcodec_receive_packet(m_codecCtx, m_packet);
-    if (ret < 0) {
-        std::cerr << "FFmpegCoder: avcodec_receive_packet error " << ret << "\n";
-        return ret;
-    }
+    *outputSize = 0; // Сбрасываем размер перед записью
 
-    // Copy encoded data into the caller's buffer so we can safely unref the
-    // packet before the next call.
-    if (m_packet->size > 0) {
-        if (static_cast<size_t>(m_packet->size) > *outputSize) {
-            // Grow the caller's buffer.  Use realloc so it stays heap-allocated
-            // in a way compatible with subsequent free() calls.
-            uint8_t* newBuf = static_cast<uint8_t*>(realloc(*outputBuffer,
-                                                             m_packet->size));
+    // Читаем ВСЕ доступные пакеты в цикле
+    while (true) {
+        ret = avcodec_receive_packet(m_codecCtx, m_packet);
+        if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
+            break; // Больше готовых пакетов пока нет
+        }
+        else if (ret < 0) {
+            std::cerr << "FFmpegEncoder: avcodec_receive_packet error " << ret << "\n";
+            return ret;
+        }
+
+        if (m_packet->size > 0) {
+            size_t newTotalSize = *outputSize + m_packet->size;
+
+            // Увеличиваем буфер, чтобы вместить новые данные
+            uint8_t* newBuf = static_cast<uint8_t*>(realloc(*outputBuffer, newTotalSize));
             if (!newBuf) {
                 av_packet_unref(m_packet);
                 return AVERROR(ENOMEM);
             }
             *outputBuffer = newBuf;
+
+            // Копируем новые данные в конец буфера
+            std::memcpy(*outputBuffer + *outputSize, m_packet->data, m_packet->size);
+            *outputSize = newTotalSize;
         }
-        std::memcpy(*outputBuffer, m_packet->data, m_packet->size);
-        *outputSize = static_cast<size_t>(m_packet->size);
+        av_packet_unref(m_packet);
     }
 
-    av_packet_unref(m_packet);
     return 0;
 }

@@ -31,6 +31,8 @@ public:
     void sendFrame(span<uint8_t>& frameData, const udp::endpoint& targetEndpoint);
 
     void setMessageHandler(function<void(const vector<uint8_t>& data, const udp::endpoint& fromEndpoint)> messageHandler);
+
+    std::optional<udp::endpoint> getLocalUdpEndpoint();
 private:
     void handleUdpReceive();
     void handleSendResult(boost::system::error_code ec, size_t bytes_sent);

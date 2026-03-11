@@ -11,6 +11,34 @@ CreationCallback(
 	_In_opt_ PCWSTR pszDeviceInstanceId
 );
 
+#include <winsock2.h>
+#include <iphlpapi.h>
+#include <stdio.h>
+#include <ws2tcpip.h>
+
+void MApp::PrintIpTable() {
+	PMIB_IPADDRTABLE pIPAddrTable = NULL;
+	DWORD dwSize = 0;
+
+	// Резервируем память (как в предыдущем примере)
+	GetIpAddrTable(NULL, &dwSize, 0);
+	pIPAddrTable = (MIB_IPADDRTABLE*)malloc(dwSize);
+
+	if (GetIpAddrTable(pIPAddrTable, &dwSize, 0) == NO_ERROR) {
+		for (int i = 0; i < (int)pIPAddrTable->dwNumEntries; i++) {
+			char szIPAddr[INET_ADDRSTRLEN]; // Буфер для строки IP
+
+			// Конвертируем DWORD адрес в строку
+			// Используем &pIPAddrTable->table[i].dwAddr напрямую
+			InetNtopA(AF_INET, &(pIPAddrTable->table[i].dwAddr), szIPAddr, INET_ADDRSTRLEN);
+
+			printf("Запись [%d]: %s\n", i, szIPAddr);
+		}
+	}
+	if (pIPAddrTable) free(pIPAddrTable);
+}
+
+
 MApp::MApp() {
 	m_pMonitorManager = new MonitorManager();
 	m_pMServer = new MServer();
@@ -71,9 +99,10 @@ int MApp::run() {
 	m_pMServer->setCreateMonitorCallback(bind(&MApp::createMonitorCallback, this, placeholders::_1, placeholders::_2));
 	m_pMServer->setRemoveMonitorCallback(bind(&MApp::removeMonitorCallback, this, placeholders::_1));
 	m_pMServer->setup(12345, 12346);
+
 	thread serverThread([this]() {
 		m_pMServer->run();
-		});
+	});
 	serverThread.detach();
 
 	return eventLoop();
@@ -81,10 +110,16 @@ int MApp::run() {
 }
 
 int MApp::eventLoop() {
-
 	while (true) {
-		this_thread::sleep_for(1000ms);
-		//m_mServer->broadcastMessage("Hi Misha My Friend");
+		this_thread::sleep_for(3000ms);
+		try {
+			//m_mServer->broadcastMessage("Hi Misha My Friend");
+			m_pMServer->sendRDPacket();
+		}
+		catch (const exception& ex) {
+			cerr << "Ошибка отправки: " << boost::locale::conv::to_utf<char>(ex.what(), "Windows-1251") << endl;
+
+		}
 	}
 	return 0;
 }
@@ -155,8 +190,9 @@ void MApp::sendFrameCallback(std::shared_ptr<Monitor> pMonitor, uint32_t frameId
 			return;
 		}
 	}
-	m_pMServer->sendFrame(outputBuffer,outputMutex,m_MonitorClient.left.at(pMonitor)->targetEndpoint);
-
+	if (outputBuffer.size() > 0) {
+		m_pMServer->sendFrame(outputBuffer, outputMutex, m_MonitorClient.left.at(pMonitor)->targetEndpoint);
+	}
 }
 
 VOID WINAPI

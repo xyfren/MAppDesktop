@@ -32,10 +32,10 @@
     <ClCompile Include="MServer.cpp">
       <Filter>Server</Filter>
     </ClCompile>
-    <ClCompile Include="JpegCoder.cpp">
+    <ClCompile Include="FrameManager.cpp">
       <Filter>FrameManager</Filter>
     </ClCompile>
-    <ClCompile Include="FrameManager.cpp">
+    <ClCompile Include="FFmpegCoder.cpp">
       <Filter>FrameManager</Filter>
     </ClCompile>
   </ItemGroup>
@@ -72,10 +72,10 @@
     <ClInclude Include="FPacket.h">
       <Filter>Server</Filter>
     </ClInclude>
-    <ClInclude Include="JpegCoder.h">
+    <ClInclude Include="FrameManager.h">
       <Filter>FrameManager</Filter>
     </ClInclude>
-    <ClInclude Include="FrameManager.h">
+    <ClInclude Include="FFmpegCoder.h">
       <Filter>FrameManager</Filter>
     </ClInclude>
   </ItemGroup>

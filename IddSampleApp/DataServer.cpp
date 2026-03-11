@@ -19,8 +19,9 @@ void DataServer::run(uint16_t port) {
         m_udpSocket = make_unique<udp::socket>(m_ioContext);
         udp::endpoint endpoint(udp::v4(), port);
         m_udpSocket->open(endpoint.protocol());
-        boost::asio::socket_base::send_buffer_size option(1024 * 1024); // 1 МБ
-        m_udpSocket->set_option(option);
+        m_udpSocket->set_option(boost::asio::socket_base::broadcast(true));
+        boost::asio::socket_base::send_buffer_size bufSize(1024 * 1024); // 1 МБ
+        m_udpSocket->set_option(bufSize);
         m_udpSocket->bind(endpoint);
 
         cout << "Дата сервер запущен на порту " << port << endl;
@@ -51,7 +52,9 @@ void DataServer::handleUdpReceive() {
 
 void DataServer::send(const vector<uint8_t>& data, const udp::endpoint& targetEndpoint) {
     if (!m_udpSocket) return;
-
+    
+    if (!m_udpSocket->is_open()) return;
+   
     // Создаем shared_ptr для продления времени жизни данных
     auto sendBuffer = make_shared<vector<uint8_t>>(data);
 
@@ -138,8 +141,9 @@ void DataServer::sendFrame(span<uint8_t>& frameData, const udp::endpoint& target
 }
 
 void DataServer::handleSendResult(boost::system::error_code ec, size_t bytes_sent) {
+	//printf("Пакет отправлен, байт: %zu\n", bytes_sent);
     if (ec) {
-        cerr << "Ошибка отправки UDP данных: " << ec.message() << endl;
+        cerr << "Ошибка отправки UDP данных: " << ec << endl;
 
         if (ec == boost::asio::error::connection_refused) {
             cerr << "Соединение отклонено удаленным хостом" << endl;
@@ -149,4 +153,24 @@ void DataServer::handleSendResult(boost::system::error_code ec, size_t bytes_sen
 
 void DataServer::setMessageHandler(function<void(const vector<uint8_t>& data, const udp::endpoint& fromEndpoint)> messageHandler) {
     m_messageHandler = messageHandler;
+}
+
+std::optional<boost::asio::ip::udp::endpoint> DataServer::getLocalUdpEndpoint() {
+    if (!m_udpSocket) {
+        return std::nullopt;
+	}
+
+    if (!m_udpSocket->is_open()) {
+        return std::nullopt;
+    }
+
+    boost::system::error_code ec;
+
+    auto endpoint = m_udpSocket->local_endpoint(ec);
+
+    if (ec) {
+        return std::nullopt;
+    }
+
+    return endpoint;
 }
