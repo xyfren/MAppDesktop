@@ -9,6 +9,7 @@ extern "C" {
 
 #include <cstdint>
 #include <span>
+#include <vector>
 #include "../Common.h"
 
 // Encodes raw BGRA frames to H.264 using FFmpeg (libx264).
@@ -16,9 +17,9 @@ extern "C" {
 // Every frame is encoded as an intra (I-frame) so that each encoded packet can
 // be decoded independently — no inter-frame state is required on the receiver.
 //
-// The encode() method returns a span pointing directly into the internal
-// AVPacket buffer.  No external allocation or memcpy is performed; the span is
-// valid until the next call to encode().
+// The encode() method returns a span pointing into an internal buffer that
+// accumulates all packets produced by a single avcodec_send_frame() call.
+// The span is valid until the next call to encode().
 class FFmpegEncoder
 {
 public:
@@ -31,7 +32,7 @@ public:
     // rowPitch  : bytes per row (may be > width*4 due to GPU alignment).
     //
     // Returns a non-owning span pointing to the encoded H.264 NAL data inside
-    // the internal AVPacket.  The span is valid until the next call to encode()
+    // an internal buffer.  The span is valid until the next call to encode()
     // or until this object is destroyed.  Returns an empty span on failure.
     std::span<const uint8_t> encode(const uint8_t* bgraData, uint32_t rowPitch);
 
@@ -45,4 +46,9 @@ private:
     AVPacket*       m_packet    = nullptr;
     SwsContext*     m_swsCtx    = nullptr;
     int64_t         m_pts       = 0;
+
+    // Buffer that accumulates encoded data from all packets produced by a
+    // single avcodec_send_frame() call.  Reused across encode() invocations
+    // to avoid per-frame heap allocation after the first few frames.
+    std::vector<uint8_t> m_encodedBuffer;
 };

@@ -99,9 +99,6 @@ std::span<const uint8_t> FFmpegEncoder::encode(const uint8_t* bgraData, uint32_t
         return {};
     }
 
-    // Release data from the previous packet so the encoder can reuse its buffer.
-    av_packet_unref(m_packet);
-
     // Convert BGRA -> YUV420P in-place (no extra allocation).
     if (av_frame_make_writable(m_yuvFrame) < 0) {
         return {};
@@ -118,12 +115,27 @@ std::span<const uint8_t> FFmpegEncoder::encode(const uint8_t* bgraData, uint32_t
         return {};
     }
 
-    // For intra-only encoding (gop_size=0) exactly one packet is produced per
-    // frame, so a single receive call is sufficient.
-    if (avcodec_receive_packet(m_codecCtx, m_packet) < 0) {
+    // Per FFmpeg documentation, avcodec_receive_packet() must be called in a
+    // loop after each avcodec_send_frame() until it returns AVERROR(EAGAIN)
+    // or AVERROR_EOF, because a single send can produce multiple packets.
+    m_encodedBuffer.clear();
+    for (;;) {
+        int ret = avcodec_receive_packet(m_codecCtx, m_packet);
+        if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
+            break;
+        }
+        if (ret < 0) {
+            return {};
+        }
+        m_encodedBuffer.insert(m_encodedBuffer.end(),
+                               m_packet->data,
+                               m_packet->data + m_packet->size);
+        av_packet_unref(m_packet);
+    }
+
+    if (m_encodedBuffer.empty()) {
         return {};
     }
 
-    // Return a zero-copy view of the packet data owned by FFmpeg.
-    return { m_packet->data, static_cast<size_t>(m_packet->size) };
+    return { m_encodedBuffer.data(), m_encodedBuffer.size() };
 }
