@@ -10,6 +10,9 @@
     <Filter Include="FrameManager">
       <UniqueIdentifier>{3b902ebc-f8f4-4ae7-b011-d7fc29360a35}</UniqueIdentifier>
     </Filter>
+    <Filter Include="FrameManager\Coders">
+      <UniqueIdentifier>{abcda458-45d9-4010-b0d9-453ba2e08934}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ConnectionServer.cpp">
@@ -36,7 +39,10 @@
       <Filter>FrameManager</Filter>
     </ClCompile>
     <ClCompile Include="FFmpegEncoder.cpp">
-      <Filter>FrameManager</Filter>
+      <Filter>FrameManager\Coders</Filter>
+    </ClCompile>
+    <ClCompile Include="JpegEncoder.cpp">
+      <Filter>FrameManager\Coders</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -75,11 +81,17 @@
     <ClInclude Include="FrameManager.h">
       <Filter>FrameManager</Filter>
     </ClInclude>
-    <ClInclude Include="FFmpegEncoder.h">
-      <Filter>FrameManager</Filter>
-    </ClInclude>
     <ClInclude Include="SPacket.h">
       <Filter>Server</Filter>
+    </ClInclude>
+    <ClInclude Include="FFmpegEncoder.h">
+      <Filter>FrameManager\Coders</Filter>
+    </ClInclude>
+    <ClInclude Include="JpegEncoder.h">
+      <Filter>FrameManager\Coders</Filter>
+    </ClInclude>
+    <ClInclude Include="IEncoder.h">
+      <Filter>FrameManager</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

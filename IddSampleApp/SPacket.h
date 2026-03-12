@@ -8,6 +8,7 @@
 #define SPACKET_MAX_DATA_SIZE 1300
 #define SPACKET_HEADER_SIZE   20
 #define SPACKET_TYPE_H264     320
+#define SPACKET_TYPE_JPEG     330
 
 // SPacket (StreamPacket) — UDP datagram carrying one fragment of an encoded video frame.
 // Fragments are numbered 0..totalParts-1; the receiver reassembles them using dataOffset.
@@ -24,11 +25,6 @@ struct SPacket {
     // Pointer to the start of the on-wire representation (header + payload).
     const uint8_t* rawData() const {
         return reinterpret_cast<const uint8_t*>(this);
-    }
-
-    // Size of the header fields (everything before data[]).
-    static constexpr size_t headerSize() {
-        return SPACKET_HEADER_SIZE;
     }
 };
 #pragma pack(pop)

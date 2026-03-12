@@ -87,7 +87,7 @@ void DataServer::sendSPackets(std::span<const SPacket> packets,
         const SPacket* pkt = &(*batch)[i];
         m_udpSocket->async_send_to(
             boost::asio::buffer(pkt->rawData(),
-                                SPacket::headerSize() + pkt->dataSize),
+                                SPACKET_HEADER_SIZE + pkt->dataSize),
             targetEndpoint,
             [this, batch](boost::system::error_code ec, size_t bytes_sent) {
                 --m_packetsInFlight;

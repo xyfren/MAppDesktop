@@ -150,6 +150,7 @@
     <ClCompile Include="FFmpegEncoder.cpp" />
     <ClCompile Include="FrameManager.cpp" />
     <ClCompile Include="GpuDisplay.cpp" />
+    <ClCompile Include="JpegEncoder.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MApp.cpp" />
     <ClCompile Include="MonitorManager.cpp" />
@@ -164,6 +165,8 @@
     <ClInclude Include="DataServer.h" />
     <ClInclude Include="DPacket.h" />
     <ClInclude Include="FFmpegEncoder.h" />
+    <ClInclude Include="IEncoder.h" />
+    <ClInclude Include="JpegEncoder.h" />
     <ClInclude Include="SPacket.h" />
     <ClInclude Include="FPacket.h" />
     <ClInclude Include="FrameManager.h" />

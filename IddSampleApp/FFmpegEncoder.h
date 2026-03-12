@@ -11,31 +11,18 @@ extern "C" {
 #include <span>
 #include <vector>
 #include "../Common.h"
+#include "IEncoder.h"
 
-// Encodes raw BGRA frames to H.264 using FFmpeg (libx264).
-//
-// Every frame is encoded as an intra (I-frame) so that each encoded packet can
-// be decoded independently — no inter-frame state is required on the receiver.
-//
-// The encode() method returns a span pointing into an internal buffer that
-// accumulates all packets produced by a single avcodec_send_frame() call.
-// The span is valid until the next call to encode().
-class FFmpegEncoder
+class FFmpegEncoder : public IEncoder
 {
 public:
     explicit FFmpegEncoder(const MonitorConfig& config);
     ~FFmpegEncoder();
 
-    // Encode one BGRA frame.
-    //
-    // bgraData  : pointer to BGRA pixel data (width * height * 4 bytes minimum).
-    // rowPitch  : bytes per row (may be > width*4 due to GPU alignment).
-    //
-    // Returns a non-owning span pointing to the encoded H.264 NAL data inside
-    // an internal buffer.  The span is valid until the next call to encode()
-    // or until this object is destroyed.  Returns an empty span on failure.
-    std::span<const uint8_t> encode(const uint8_t* bgraData, uint32_t rowPitch);
 
+    std::span<const uint8_t> encode(const uint8_t* bgraData, uint32_t rowPitch) override;
+
+    uint16_t getPayloadType() const override { return SPACKET_TYPE_H264; }
 private:
     bool initialize();
     void cleanup();

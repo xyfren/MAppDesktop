@@ -1,4 +1,4 @@
-#include "FFmpegEncoder.h"
+﻿#include "FFmpegEncoder.h"
 
 #include <iostream>
 
@@ -40,20 +40,33 @@ bool FFmpegEncoder::initialize()
     const int fps            = m_config.refreshRate > 0 ? m_config.refreshRate : 60;
     m_codecCtx->time_base    = { 1, fps };
     m_codecCtx->framerate    = { fps, 1 };
-    // Intra-only: every frame is a key-frame so the receiver can always decode
-    // without needing prior frames (no inter-frame state).
     m_codecCtx->gop_size     = 0;
     m_codecCtx->max_b_frames = 0;
 
+    av_opt_set(m_codecCtx->priv_data, "preset", "p1", 0);     // p1 - самый быстрый пресет
+    av_opt_set(m_codecCtx->priv_data, "tune", "ull", 0);      // ull - Ultra Low Latency
+    av_opt_set(m_codecCtx->priv_data, "delay", "0", 0);       // Отключаем задержку на уровне GPU
+    av_opt_set(m_codecCtx->priv_data, "forced-idr", "1", 0);  // Принудительные IDR кадры
+
+    m_codecCtx->delay = 0;
+    m_codecCtx->thread_count = 1; // Многопоточность может добавлять задержку в 1 кадр на поток
+
     // Low-latency libx264 settings.
     AVDictionary* param = nullptr;
+
+    // Для NVENC свои параметры:
+    av_dict_set(&param, "delay", "0", 0);
+    av_dict_set(&param, "forced-idr", "1", 0);
     av_dict_set(&param, "preset",      "ultrafast",          0);
     av_dict_set(&param, "tune",        "zerolatency",        0);
     av_dict_set(&param, "x264-params", "keyint=1:scenecut=0", 0);
 
-    if (avcodec_open2(m_codecCtx, codec, &param) < 0) {
-        std::cerr << "FFmpegEncoder: avcodec_open2 failed\n";
-        av_dict_free(&param);
+
+    int ret = avcodec_open2(m_codecCtx, codec, &param);
+    if (ret < 0) {
+        char errbuf[256];
+        av_strerror(ret, errbuf, sizeof(errbuf));
+        std::cerr << "FFmpegEncoder: open failed: " << errbuf << "\n";
         return false;
     }
     av_dict_free(&param);
@@ -115,9 +128,7 @@ std::span<const uint8_t> FFmpegEncoder::encode(const uint8_t* bgraData, uint32_t
         return {};
     }
 
-    // Per FFmpeg documentation, avcodec_receive_packet() must be called in a
-    // loop after each avcodec_send_frame() until it returns AVERROR(EAGAIN)
-    // or AVERROR_EOF, because a single send can produce multiple packets.
+
     m_encodedBuffer.clear();
     for (;;) {
         int ret = avcodec_receive_packet(m_codecCtx, m_packet);
