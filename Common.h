@@ -17,12 +17,22 @@
 #define IOCTL_IDD_CHANGE_RES      CTL_CODE(FILE_DEVICE_UNKNOWN, 0x802, METHOD_BUFFERED, FILE_ANY_ACCESS)
 #define IOCTL_IDD_GET_INFO        CTL_CODE(FILE_DEVICE_UNKNOWN, 0x803, METHOD_BUFFERED, FILE_ANY_ACCESS)
 
+enum class ConnectionType {
+    Null, Usb, Wireless
+};
+
+enum class CoderType {
+    Null, FFmpeg, Jpeg
+};
+
 struct MonitorConfig {
     uint16_t byteDepth;
     uint16_t width;
     uint16_t height;
     uint16_t refreshRate;
     uint16_t monitorId;
+    ConnectionType connectionType;
+    CoderType coderType;
     bool enabled;
 };
 

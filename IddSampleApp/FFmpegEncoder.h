@@ -6,7 +6,6 @@ extern "C" {
 #include <libavutil/opt.h>
 #include <libswscale/swscale.h>
 }
-
 #include <cstdint>
 #include <span>
 #include <vector>

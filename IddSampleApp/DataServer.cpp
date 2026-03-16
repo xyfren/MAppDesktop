@@ -19,7 +19,7 @@ void DataServer::run(uint16_t port) {
         udp::endpoint endpoint(udp::v4(), port);
         m_udpSocket->open(endpoint.protocol());
         m_udpSocket->set_option(boost::asio::socket_base::broadcast(true));
-        boost::asio::socket_base::send_buffer_size bufSize(1024 * 1024); // 1 MB
+        boost::asio::socket_base::send_buffer_size bufSize(1024 * 1024 * 4); // 1 MB
         m_udpSocket->set_option(bufSize);
         m_udpSocket->bind(endpoint);
 
@@ -74,6 +74,7 @@ void DataServer::sendSPackets(std::span<const SPacket> packets,
     // This provides back-pressure without unbounded kernel-buffer growth.
     const int MAX_IN_FLIGHT = static_cast<int>(packets.size() * 2);
     if (m_packetsInFlight > MAX_IN_FLIGHT) {
+        printf("drop\n");
         return;
     }
 
@@ -104,6 +105,7 @@ void DataServer::sendSPackets(std::span<const SPacket> packets,
 }
 
 void DataServer::handleSendResult(boost::system::error_code ec, size_t bytes_sent) {
+	cout << "Sent " << bytes_sent << " bytes" << endl;
     if (ec) {
         cerr << "Error sending UDP data: " << ec << endl;
 

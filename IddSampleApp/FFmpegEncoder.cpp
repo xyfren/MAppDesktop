@@ -17,50 +17,44 @@ FFmpegEncoder::~FFmpegEncoder()
 
 bool FFmpegEncoder::initialize()
 {
-    // Prefer the software libx264 encoder for maximum portability and control.
-    const AVCodec* codec = avcodec_find_encoder_by_name("libx264");
-    if (!codec) {
-        codec = avcodec_find_encoder(AV_CODEC_ID_H264);
-    }
-    if (!codec) {
-        std::cerr << "FFmpegEncoder: H.264 encoder not found\n";
-        return false;
-    }
+    const AVCodec* codec = avcodec_find_encoder(AV_CODEC_ID_H264);
+    if (!codec) return false;
 
     m_codecCtx = avcodec_alloc_context3(codec);
-    if (!m_codecCtx) {
-        std::cerr << "FFmpegEncoder: avcodec_alloc_context3 failed\n";
-        return false;
-    }
 
-    m_codecCtx->width        = m_config.width;
-    m_codecCtx->height       = m_config.height;
-    m_codecCtx->pix_fmt      = AV_PIX_FMT_YUV420P;
-    m_codecCtx->thread_type  = FF_THREAD_SLICE;
-    const int fps            = m_config.refreshRate > 0 ? m_config.refreshRate : 60;
-    m_codecCtx->time_base    = { 1, fps };
-    m_codecCtx->framerate    = { fps, 1 };
-    m_codecCtx->gop_size     = 0;
-    m_codecCtx->max_b_frames = 0;
+    // 1. Базовые параметры
+    m_codecCtx->width = m_config.width;
+    m_codecCtx->height = m_config.height;
+    m_codecCtx->pix_fmt = AV_PIX_FMT_YUV420P;
+    m_codecCtx->time_base = { 1, 60 };
+    m_codecCtx->framerate = { 60, 1 };
 
-    av_opt_set(m_codecCtx->priv_data, "preset", "p1", 0);     // p1 - самый быстрый пресет
-    av_opt_set(m_codecCtx->priv_data, "tune", "ull", 0);      // ull - Ultra Low Latency
-    av_opt_set(m_codecCtx->priv_data, "delay", "0", 0);       // Отключаем задержку на уровне GPU
-    av_opt_set(m_codecCtx->priv_data, "forced-idr", "1", 0);  // Принудительные IDR кадры
+    // 2. Убираем задержку буферизации (КРИТИЧНО)
+    m_codecCtx->gop_size = 1;       // Каждый кадр - I-frame (Intra-only)
+    m_codecCtx->max_b_frames = 0;   // B-кадры создают задержку, они нам не нужны
+    m_codecCtx->thread_count = 1;   // Один поток гарантирует "кадр на вход -> пакет на выход"
+    m_codecCtx->flags |= AV_CODEC_FLAG_LOW_DELAY;
 
-    m_codecCtx->delay = 0;
-    m_codecCtx->thread_count = 1; // Многопоточность может добавлять задержку в 1 кадр на поток
+    // 3. Опции x264
+    av_opt_set(m_codecCtx->priv_data, "preset", "ultrafast", 0);
+    av_opt_set(m_codecCtx->priv_data, "tune", "zerolatency", 0);
 
-    // Low-latency libx264 settings.
+    // 4. Битрейт (без него x264 может выдавать пустые пакеты на статичной картинке)
+    
+
     AVDictionary* param = nullptr;
 
-    // Для NVENC свои параметры:
+    av_dict_set(&param, "preset", "p1", 0);
+    av_dict_set(&param, "tune", "ull", 0);
     av_dict_set(&param, "delay", "0", 0);
-    av_dict_set(&param, "forced-idr", "1", 0);
-    av_dict_set(&param, "preset",      "ultrafast",          0);
-    av_dict_set(&param, "tune",        "zerolatency",        0);
-    av_dict_set(&param, "x264-params", "keyint=1:scenecut=0", 0);
 
+    // Управление битрейтом (Constant Bitrate лучше для сети)
+    m_codecCtx->bit_rate = 4000000; // 4 Mbps для начала
+    m_codecCtx->rc_max_rate = 20000000;
+    m_codecCtx->rc_buffer_size = 0; // Немедленная отправка без накопления
+
+    // Принудительные IDR кадры для возможности мгновенного декодирования
+    av_dict_set(&param, "forced-idr", "1", 0);
 
     int ret = avcodec_open2(m_codecCtx, codec, &param);
     if (ret < 0) {
@@ -85,11 +79,11 @@ bool FFmpegEncoder::initialize()
     m_packet = av_packet_alloc();
     if (!m_packet) return false;
 
-    // Color-space conversion context: BGRA (GPU output) -> YUV420P (encoder input).
+    // Color-space conversion context: BGRA (GPU output) -> YUV420PP (encoder input).
     m_swsCtx = sws_getContext(
         m_config.width,  m_config.height, AV_PIX_FMT_BGRA,
         m_config.width,  m_config.height, AV_PIX_FMT_YUV420P,
-        SWS_BILINEAR, nullptr, nullptr, nullptr);
+        SWS_FAST_BILINEAR, nullptr, nullptr, nullptr);
     if (!m_swsCtx) {
         std::cerr << "FFmpegEncoder: sws_getContext failed\n";
         return false;
@@ -108,12 +102,16 @@ void FFmpegEncoder::cleanup()
 
 std::span<const uint8_t> FFmpegEncoder::encode(const uint8_t* bgraData, uint32_t rowPitch)
 {
+    
     if (!m_codecCtx || !m_yuvFrame || !m_swsCtx || !m_packet) {
+        std::cout << "error encode" << std::endl;
         return {};
     }
 
-    // Convert BGRA -> YUV420P in-place (no extra allocation).
+    // Convert BGRA -> YUV420PP in-place (no extra allocation).
     if (av_frame_make_writable(m_yuvFrame) < 0) {
+
+        std::cout << "error conv" << std::endl;
         return {};
     }
     const uint8_t* srcSlice[1]  = { bgraData };
@@ -125,6 +123,7 @@ std::span<const uint8_t> FFmpegEncoder::encode(const uint8_t* bgraData, uint32_t
 
     // Submit the frame to the encoder.
     if (avcodec_send_frame(m_codecCtx, m_yuvFrame) < 0) {
+        std::cout << "error avcodec_send_frame" << std::endl;
         return {};
     }
 
@@ -136,6 +135,7 @@ std::span<const uint8_t> FFmpegEncoder::encode(const uint8_t* bgraData, uint32_t
             break;
         }
         if (ret < 0) {
+            std::cout << "error avcodec_receive_packet" << std::endl;
             return {};
         }
         m_encodedBuffer.insert(m_encodedBuffer.end(),

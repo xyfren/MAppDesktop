@@ -11,7 +11,6 @@ struct MClient
 	
 	std::shared_ptr<boost::asio::ip::tcp::socket> socket;
 	boost::asio::ip::udp::endpoint targetEndpoint;
-	uint16_t udpPort = 0;
 	State state = State::Unconnected;
 
 	MClient() {

@@ -2,6 +2,7 @@
 #include <cstdint>
 #include <vector>
 #include <iostream>
+#include "../Common.h"
 
 #pragma pack(push, 1)
 struct APacket {
@@ -10,6 +11,9 @@ struct APacket {
     uint16_t height = 0;
     uint16_t refreshRate = 0;
     uint16_t udpPort = 0;
+
+    CoderType coderType = CoderType::Null;
+    ConnectionType connectionType = ConnectionType::Null;
 
     std::vector<uint8_t> bytes() const {
         std::vector<uint8_t> byteArray(sizeof(APacket), 0);

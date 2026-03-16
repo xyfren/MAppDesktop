@@ -13,6 +13,9 @@
     <Filter Include="FrameManager\Coders">
       <UniqueIdentifier>{abcda458-45d9-4010-b0d9-453ba2e08934}</UniqueIdentifier>
     </Filter>
+    <Filter Include="UsbManager">
+      <UniqueIdentifier>{2807ba26-433d-4a60-8e01-c7bfc5102de2}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ConnectionServer.cpp">
@@ -43,6 +46,9 @@
     </ClCompile>
     <ClCompile Include="JpegEncoder.cpp">
       <Filter>FrameManager\Coders</Filter>
+    </ClCompile>
+    <ClCompile Include="MUsbManager.cpp">
+      <Filter>UsbManager</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -92,6 +98,10 @@
     </ClInclude>
     <ClInclude Include="IEncoder.h">
       <Filter>FrameManager</Filter>
+    </ClInclude>
+    <ClInclude Include="MAppSettings.h" />
+    <ClInclude Include="MUsbManager.h">
+      <Filter>UsbManager</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

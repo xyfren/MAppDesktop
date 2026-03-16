@@ -3,10 +3,10 @@
 #include <algorithm>
 #include <cstring>
 
-FrameManager::FrameManager(MonitorConfig& config, EncoderType type)
+FrameManager::FrameManager(MonitorConfig& config)
     : m_config(config)
 {
-    if (type == EncoderType::Jpeg) {
+    if (config.coderType == CoderType::Jpeg) {
         m_encoder = std::make_unique<JpegEncoder>(config);
     }
     else {

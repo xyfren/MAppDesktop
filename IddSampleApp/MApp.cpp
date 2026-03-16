@@ -42,6 +42,7 @@ void MApp::PrintIpTable() {
 MApp::MApp() {
 	m_pMonitorManager = new MonitorManager();
 	m_pMServer = new MServer();
+	
 }
 
 MApp::~MApp() {
@@ -105,6 +106,9 @@ int MApp::run() {
 	});
 	serverThread.detach();
 
+	m_pMUsbManager = new MUsbManager(12345);
+	m_pMUsbManager->start();
+
 	return eventLoop();
 
 }
@@ -136,7 +140,7 @@ void MApp::createMonitorCallback(MonitorConfig config, std::shared_ptr<MClient> 
 		newMonitor->setFrameCallback(bind(&MApp::sendFrameCallback, this, placeholders::_1, placeholders::_2, placeholders::_3, placeholders::_4, placeholders::_5));
 		
 		m_MonitorClient.insert({newMonitor,client});
-		m_MonitorFrameManager[newMonitor] = std::make_shared<FrameManager>(config);
+		m_MonitorFrameManager[newMonitor] = make_shared<FrameManager>(config);
 
 		m_pMonitorManager->AddMonitor(newMonitor);
 	}
@@ -193,8 +197,17 @@ void MApp::sendFrameCallback(std::shared_ptr<Monitor> pMonitor, uint64_t frameId
 		static_cast<const uint8_t*>(frameData), frameSize);
 
 	if (!packets.empty()) {
-		m_pMServer->sendSPackets(packets, targetEndpoint);
+		if (pMonitor->GetConfig().connectionType == ConnectionType::Wireless) {
+			m_pMServer->sendSPackets(packets, targetEndpoint);
+		}
+		else if (pMonitor->GetConfig().connectionType == ConnectionType::Usb) {
+		
+		}
+		else {
+
+		}
 	}
+
 }
 
 VOID WINAPI

@@ -76,14 +76,14 @@ boost::asio::awaitable<void> ConnectionServer::clientHandler(shared_ptr<tcp::soc
             }
         }
     }
-    catch (const boost::system::system_error& e) {
-        if (e.code() != boost::asio::error::eof &&
-            e.code() != boost::asio::error::connection_reset) {
-            cerr << "Ошибка чтения от клиента: " << e.what() << endl;
+    catch (const boost::system::system_error& ex) {
+        if (ex.code() != boost::asio::error::eof &&
+            ex.code() != boost::asio::error::connection_reset) {
+            cerr << "Ошибка чтения от клиента: " << boost::locale::conv::to_utf<char>(ex.what(), "Windows-1251") << endl;
         }
     }
-    catch (const exception& e) {
-        cerr << "Ошибка в обработчике клиента: " << e.what() << endl;
+    catch (const exception& ex) {
+        cerr << "Ошибка в обработчике клиента: " << ex.what() << endl;
     }
 
     // Удаляем соединение
@@ -147,6 +147,10 @@ void ConnectionServer::broadcastData(const vector<uint8_t>& data) {
             send(data, socket);
         }
     }
+}
+
+void ConnectionServer::sendSPackets(std::span<const SPacket> packets, shared_ptr<tcp::socket> socket) {
+
 }
 
 set<shared_ptr<tcp::socket>> ConnectionServer::getConnections() {

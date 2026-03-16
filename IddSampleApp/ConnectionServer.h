@@ -5,6 +5,7 @@
 #include <boost/asio/co_spawn.hpp>
 #include <boost/bind/bind.hpp>
 #include <boost/asio/experimental/awaitable_operators.hpp>
+#include <boost/locale.hpp>
 
 #include <coroutine>
 #include <functional>
@@ -12,6 +13,9 @@
 #include <memory>
 #include <set>
 #include <mutex>
+#include <span>
+
+#include "SPacket.h"
 
 using boost::asio::ip::tcp;
 
@@ -28,6 +32,7 @@ public:
 
     void send(const vector<uint8_t>& data, shared_ptr<tcp::socket> socket);
     void broadcastData(const vector<uint8_t>& data);
+    void sendSPackets(std::span<const SPacket> packets, shared_ptr<tcp::socket> socket);
 
     set<shared_ptr<tcp::socket>> getConnections();
 

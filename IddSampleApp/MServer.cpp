@@ -67,7 +67,12 @@ void MServer::run() {
     cout << "Адрес сервера: " << m_serverLocalAddress << endl;
 	m_connectionServer->run(m_connectionPort);
     m_dataServer->run(m_dataPort);
-	m_ioContext.run();
+    const int num_threads = 2;
+	cout << "Запуск с " << num_threads << " потоками" << endl;
+	vector<thread> threads;
+    for (int i = 0; i < num_threads; ++i) {
+        m_ioContext.run();
+    }
 }
 
 void MServer::broadcastMessage(const string& msg) {
@@ -81,8 +86,6 @@ void MServer::broadcastMessage(const string& msg) {
             if (socket and socket->is_open()) {
                 m_connectionServer->send(tcpbytes, socket);
                 if (client->state == MClient::State::Authorized) {
-                    boost::asio::ip::tcp::endpoint tcp_ep = socket->remote_endpoint();
-                    boost::asio::ip::udp::endpoint targetEndpoint(tcp_ep.address(),client->udpPort);
                     m_dataServer->send(udpbytes, client->targetEndpoint);
                 }
             }
@@ -114,7 +117,6 @@ void MServer::onMessageC(const vector<uint8_t>& data, shared_ptr<tcp::socket> so
         cout << "Клиаент авторизован" << endl;
         {
             lock_guard<mutex> lock(m_clientsMutex);
-            m_clients[socket]->udpPort = pack.udpPort;
             // Add udp endpoint to MClient 
             boost::asio::ip::tcp::endpoint tcp_ep = socket->remote_endpoint();
             boost::asio::ip::udp::endpoint targetEndpoint(tcp_ep.address(), pack.udpPort);
@@ -129,6 +131,8 @@ void MServer::onMessageC(const vector<uint8_t>& data, shared_ptr<tcp::socket> so
         config.width = pack.width;
         config.height = pack.height;
         config.refreshRate = 60;
+        config.coderType = pack.coderType;
+        config.connectionType = pack.connectionType;
 
         m_createMonitorCallback(config,m_clients.at(socket));
     }

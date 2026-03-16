@@ -4,9 +4,12 @@
 #include <boost/locale.hpp>
 #include <memory>
 
+#include "MAppSettings.h"
 #include "MonitorManager.h"
 #include "MServer.h"
+#include "MUsbManager.h"
 #include "FrameManager.h"
+
 
 class MApp
 {
@@ -32,6 +35,7 @@ public:
 private:
 	MonitorManager* m_pMonitorManager;
 	MServer* m_pMServer;
+	MUsbManager* m_pMUsbManager;
 
 	std::mutex monitorMutex;
 	boost::bimap<std::shared_ptr<Monitor>, std::shared_ptr<MClient>> m_MonitorClient;
