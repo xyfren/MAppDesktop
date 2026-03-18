@@ -9,6 +9,7 @@
 #include "MServer.h"
 #include "MUsbManager.h"
 #include "FrameManager.h"
+#include "TimeProfiler.h"
 
 
 class MApp

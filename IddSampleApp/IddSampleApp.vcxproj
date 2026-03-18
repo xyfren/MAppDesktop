@@ -191,6 +191,7 @@ xcopy /y "%LOCALAPPDATA%\Android\Sdk\platform-tools\AdbWinUsbApi.dll" "$(OutDir)
     <ClInclude Include="MClient.h" />
     <ClInclude Include="MonitorManager.h" />
     <ClInclude Include="MServer.h" />
+    <ClInclude Include="TimeProfiler.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\IddSampleDriver\IddSampleDriver.vcxproj">

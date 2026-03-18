@@ -42,7 +42,7 @@ void MApp::PrintIpTable() {
 MApp::MApp() {
 	m_pMonitorManager = new MonitorManager();
 	m_pMServer = new MServer();
-	
+	TimeProfiler::instance();
 }
 
 MApp::~MApp() {
@@ -203,6 +203,7 @@ void MApp::sendFrameCallback(std::shared_ptr<Monitor> pMonitor, uint64_t frameId
 			m_pMServer->sendSPackets(packets, targetEndpoint);
 		}
 		else if (pMonitor->GetConfig().connectionType == ConnectionType::Usb) {
+			//cout << "Send packets\n";
 			m_pMServer->sendSPackets(packets, socket);
 		}
 		else {

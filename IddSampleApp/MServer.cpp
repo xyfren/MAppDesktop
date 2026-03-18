@@ -67,7 +67,7 @@ void MServer::run() {
     cout << "Адрес сервера: " << m_serverLocalAddress << endl;
 	m_connectionServer->run(m_connectionPort);
     m_dataServer->run(m_dataPort);
-    const int num_threads = 2;
+    const int num_threads = 1;
 	cout << "Запуск с " << num_threads << " потоками" << endl;
 	vector<thread> threads;
     for (int i = 0; i < num_threads; ++i) {
@@ -151,9 +151,10 @@ void MServer::onMessageC(const vector<uint8_t>& data, shared_ptr<tcp::socket> so
         MonitorConfig config;
         config.width = pack.width;
         config.height = pack.height;
-        config.refreshRate = 60;
+        config.refreshRate = 30;
         config.coderType = pack.coderType;
         config.connectionType = pack.connectionType;
+        cout << (int)config.connectionType << endl;;
 
         m_createMonitorCallback(config,m_clients.at(socket));
     }

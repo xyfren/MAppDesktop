@@ -103,5 +103,6 @@
     <ClInclude Include="MUsbManager.h">
       <Filter>UsbManager</Filter>
     </ClInclude>
+    <ClInclude Include="TimeProfiler.h" />
   </ItemGroup>
 </Project>

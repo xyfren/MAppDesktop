@@ -30,8 +30,8 @@ bool FFmpegEncoder::initialize()
     m_codecCtx->framerate = { 60, 1 };
 
     // 2. Убираем задержку буферизации (КРИТИЧНО)
-    m_codecCtx->gop_size = 1;       // Каждый кадр - I-frame (Intra-only)
-    m_codecCtx->max_b_frames = 0;   // B-кадры создают задержку, они нам не нужны
+    m_codecCtx->gop_size = 10;       // Каждый кадр - I-frame (Intra-only)
+    m_codecCtx->max_b_frames = 10;   // B-кадры создают задержку, они нам не нужны
     m_codecCtx->thread_count = 1;   // Один поток гарантирует "кадр на вход -> пакет на выход"
     m_codecCtx->flags |= AV_CODEC_FLAG_LOW_DELAY;
 

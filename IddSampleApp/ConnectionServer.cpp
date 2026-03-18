@@ -39,6 +39,7 @@ boost::asio::awaitable<void> ConnectionServer::startAcceptor(uint16_t port) {
 
         while (true) {
             shared_ptr<tcp::socket> socket = make_shared<tcp::socket>(co_await m_acceptor.async_accept(boost::asio::use_awaitable));
+            socket->set_option(tcp::no_delay(true));
 
             // Запускаем обработку клиента в новой корутине
             boost::asio::co_spawn(executor,
@@ -170,45 +171,82 @@ void ConnectionServer::sendSPackets(span<const SPacket> packets, shared_ptr<tcp:
     if (!socket || !socket->is_open()) return;
     if (packets.empty()) return;
 
-    const int MAX_IN_FLIGHT = static_cast<int>(packets.size() * 2);
-    if (m_packetsInFlight > MAX_IN_FLIGHT) {
-        printf("drop\n");
-        return;
-    }
+    //const int MAX_IN_FLIGHT = static_cast<int>(packets.size() * 2);
+    //if (m_packetsInFlight > MAX_IN_FLIGHT) {
+    //    printf("drop\n");
+    //    return;
+    //}
 
-    m_packetsInFlight += static_cast<int>(packets.size());
+    //m_packetsInFlight += static_cast<int>(packets.size());
 
-    for (size_t i = 0; i < packets.size(); ++i) {
-        const SPacket* pkt = &(packets[i]);
-        span<const uint8_t> pkt_span(reinterpret_cast<const uint8_t*>(pkt), pkt->dataSize);
-        boost::asio::post(m_ioContext,
-            [this, pkt_span, socket]() {  // Убрали создание нового span
-                if (!socket->is_open()) {
-                    return;
-                }
+    //auto data_ptr = make_shared<vector<SPacket>>(packets.begin(), packets.end());
+    //boost::asio::post(m_ioContext,
+    //    [this, data_ptr, socket]() {  // socket уже shared_ptr, захватываем по значению
+    //        if (!socket->is_open()) return;
 
-                // Копируем данные для асинхронной операции
-                auto data_ptr = make_shared<vector<uint8_t>>(pkt_span.begin(), pkt_span.end());
+    //        for (size_t i = 0; i < data_ptr->size(); ++i) {
+    //            SPacket* pkt = &(*data_ptr)[i];
+    //            span<const uint8_t> pkt_span(
+    //                reinterpret_cast<const uint8_t*>(pkt),
+    //                SPACKET_HEADER_SIZE + pkt->dataSize
+    //            );
+
+    //            boost::asio::async_write(*socket,
+    //                boost::asio::buffer(pkt_span.data(), pkt_span.size_bytes()),
+    //                [this, socket, data_ptr, pkt_span]  // data_ptr захвачен!
+    //                (boost::system::error_code ec, size_t bytes) {
+    //                    --m_packetsInFlight;
+
+    //                    if (ec) {
+    //                        if (ec != boost::asio::error::operation_aborted) {
+    //                            std::cerr << "Ошибка отправки: " << ec.message() << std::endl;
+    //                        }
+    //                        removeConnection(socket);  // передаём shared_ptr
+    //                    }
+    //                    else {
+    //                        if (bytes < 1320)
+    //                            TimeProfiler::instance().stamp("frameSend");
+
+    //                        ++m_packetsSent;
+    //                        m_bytesSent += bytes;
+    //                    }
+    //                });
+    //        }
+    //    });
+    //++m_framesSent;
+    boost::asio::post(m_ioContext,
+        [this, packets, socket]() mutable {  // mutable нужен для изменения packets? нет, нам не нужно изменять
+            if (!socket->is_open()) return;
+
+            for (size_t i = 0; i < packets.size(); ++i) {
+                const SPacket* pkt = &packets[i];
+                span<const uint8_t> pkt_span(
+                    reinterpret_cast<const uint8_t*>(pkt),
+                    SPACKET_HEADER_SIZE + pkt->dataSize
+                );
 
                 boost::asio::async_write(*socket,
-                    boost::asio::buffer(*data_ptr),
-                    [this, socket, data_ptr](boost::system::error_code ec, size_t bytes) {
-                        m_packetsInFlight--;
+                    boost::asio::buffer(pkt_span.data(), pkt_span.size_bytes()),
+                    [this, socket, pkt_span]  // Захватываем pkt_span (копия)
+                    (boost::system::error_code ec, size_t bytes) {
+                        --m_packetsInFlight;
+
                         if (ec) {
                             if (ec != boost::asio::error::operation_aborted) {
-                                cerr << "Ошибка отправки: " << ec.message() << endl;
+                                std::cerr << "Ошибка отправки: " << ec.message() << std::endl;
                             }
                             removeConnection(socket);
                         }
                         else {
-                            cout << "Отправлено " << bytes << " байт" << endl;
+                            if (bytes < 1320)
+                                TimeProfiler::instance().stamp("frameSend");
+
                             ++m_packetsSent;
                             m_bytesSent += bytes;
                         }
                     });
-            });
-
-    }
+            }
+        });
     ++m_framesSent;
 }
 

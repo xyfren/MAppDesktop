@@ -275,6 +275,7 @@ void Monitor::Run() {
             auto frame = m_pVideoBuffer->GetLatestFrame();
 
             //std::cout << "Новый кадр " << "id = " << frame.frameId <<"; idx = " << frame.bufferIdx << std::endl;
+            TimeProfiler::instance().stamp("createFrame");
             D3D11_TEXTURE2D_DESC desk;
             frame.texture->GetDesc(&desk);
 

@@ -23,6 +23,7 @@
 #include "../Common.h"
 #include "../VideoBuffer.h"
 #include "GpuDisplay.h"
+#include "TimeProfiler.h"
 
 class Monitor;
 

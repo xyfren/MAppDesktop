@@ -14,6 +14,7 @@
 #include <set>
 #include <mutex>
 #include <span>
+#include "TimeProfiler.h"
 
 #include "SPacket.h"
 
@@ -34,7 +35,7 @@ public:
     void broadcastData(shared_ptr<vector<uint8_t>> pData);
     void broadcastData(shared_ptr<vector<uint8_t>> pData, std::function<bool(const std::shared_ptr<tcp::socket>&)> filter);
 
-    void sendSPackets(std::span<const SPacket> packets, shared_ptr<tcp::socket> socket);
+    void sendSPackets(std::span<const SPacket> packets,  shared_ptr<tcp::socket> socket);
 
     set<shared_ptr<tcp::socket>> getConnections();
 

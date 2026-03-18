@@ -2,6 +2,7 @@
 #include <iostream>
 #include <algorithm>
 #include <cstring>
+#include "TimeProfiler.h"
 
 FrameManager::FrameManager(MonitorConfig& config)
     : m_config(config)
@@ -24,11 +25,13 @@ std::span<const SPacket> FrameManager::encodeFrame(
     if (!m_encoder) return {};
 
     // Вызываем полиморфный метод encode
+    TimeProfiler::instance().stamp("StartEncoding");
     std::span<const uint8_t> encoded = m_encoder->encode(inputData, rowPitch);
     if (encoded.empty()) {
         std::cerr << "FrameManager: encode failed for frame " << frameId << "\n";
         return {};
     }
+    TimeProfiler::instance().stamp("FinishEncoding");
 
     const size_t   totalBytes = encoded.size();
     const uint32_t totalParts = static_cast<uint32_t>(
@@ -39,10 +42,10 @@ std::span<const SPacket> FrameManager::encodeFrame(
             << totalBytes << " bytes, " << totalParts << " parts)\n";
         return {};
     }
-
+    TimeProfiler::instance().stamp("StartPacketing");
     // Забираем тип пакета у кодера
     const uint16_t payloadType = m_encoder->getPayloadType();
-
+    
     for (uint32_t i = 0; i < totalParts; ++i) {
         const uint32_t offset = i * SPACKET_MAX_DATA_SIZE;
         const uint16_t partSize = static_cast<uint16_t>(
@@ -57,6 +60,7 @@ std::span<const SPacket> FrameManager::encodeFrame(
         pkt.dataSize = partSize;
         std::memcpy(pkt.data, encoded.data() + offset, partSize);
     }
+    TimeProfiler::instance().stamp("FinishPacketing");
 
     return { m_packetPool.data(), totalParts };
 }
