@@ -895,36 +895,13 @@ void VideoBuffer::PushFrame(ID3D11Texture2D* sourceTexture, ID3D11DeviceContext*
 
     uint16_t writeBuffer = header->freshBufferIdx ^ 1;
 
-    if (header->bufferProccesed[writeBuffer]) {
-        header->bufferProccesed[writeBuffer] = false;
-        //DRV_LOG("NO_WAIT");
+    // 1. Ждем, пока приложение освободит этот буфер
+    if (!header->bufferProccesed[writeBuffer]) {
+        WaitForSingleObject(m_hFrameProcessedEvent, 1000);
+        // Здесь можно добавить проверку на таймаут, но для простоты опустим
     }
-    else {
-        DWORD waitResult = WaitForSingleObject(
-            m_hFrameProcessedEvent,       
-            1000);
-        switch (waitResult)
-        {
-        case WAIT_OBJECT_0:
-        {
-            DRV_LOG("WAIT_SUCC");
-            header->bufferProccesed[writeBuffer] = false;
-            ResetEvent(m_hFrameProcessedEvent);
-            break;
-        }
-        case WAIT_TIMEOUT:
-        {
-            header->bufferProccesed[writeBuffer] = true;
-            DRV_LOG("WAIT_TIMEOUT");
-            break;
-        }
-        default:
-        {
-            ResetEvent(m_hFrameProcessedEvent);
-            break;
-        }
-        }
-    }
+
+    header->bufferProccesed[writeBuffer] = false;
 
     if (writeBuffer == 0) {
         m_context->CopyResource(m_texture1.Get(), sourceTexture);
@@ -934,7 +911,7 @@ void VideoBuffer::PushFrame(ID3D11Texture2D* sourceTexture, ID3D11DeviceContext*
     }
 
     // Ensure GPU copy is complete before signaling the app
-    //m_context->Flush();
+    m_context->Flush();
 
     header->frameId = frameId;
     header->timestamp = timestamp;

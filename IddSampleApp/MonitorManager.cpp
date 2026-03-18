@@ -246,7 +246,7 @@ void Monitor::Run() {
         {
         case WAIT_OBJECT_0:
         {
-            ResetEvent(m_pVideoBuffer->GetFrameReadyEvent());
+            //ResetEvent(m_pVideoBuffer->GetFrameReadyEvent());
             auto frame = m_pVideoBuffer->GetLatestFrame();
             m_gDisplay->ShowFrame(frame.texture);
             //std::cout << "Новый кадр " << "id = " << frame.frameId <<"; idx = " << frame.bufferIdx << std::endl;
