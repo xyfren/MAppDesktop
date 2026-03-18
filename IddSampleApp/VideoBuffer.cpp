@@ -41,9 +41,9 @@ bool VideoBuffer::Initialize(
     sa.lpSecurityDescriptor = &sd;
     sa.bInheritHandle = FALSE;
 
-    m_hFrameReadyEvent = CreateEventW(&sa, TRUE, FALSE, frameReadyName);
+    m_hFrameReadyEvent = CreateEventW(&sa, FALSE, FALSE, frameReadyName);
 
-    m_hFrameProcessedEvent = CreateEventW(&sa, TRUE, FALSE, frameProcessedName);
+    m_hFrameProcessedEvent = CreateEventW(&sa, FALSE, FALSE, frameProcessedName);
 
     if (!m_hFrameReadyEvent || !m_hFrameProcessedEvent)
     {
@@ -89,7 +89,7 @@ bool VideoBuffer::Initialize(
     desc.SampleDesc.Count = 1;
     desc.Usage = D3D11_USAGE_DEFAULT;
     desc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET;
-    desc.MiscFlags = D3D11_RESOURCE_MISC_SHARED_NTHANDLE | D3D11_RESOURCE_MISC_SHARED;
+    desc.MiscFlags = D3D11_RESOURCE_MISC_SHARED_NTHANDLE | D3D11_RESOURCE_MISC_SHARED_KEYEDMUTEX;
     desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
 
     printf("%d,%d", m_width, m_height);
@@ -99,11 +99,14 @@ bool VideoBuffer::Initialize(
         printf("CreateTexture2D failed for texture1, hr=0x%08X", hr);
         return false;
     }
+    m_texture1.As(&m_mutex1);
+
     hr = device->CreateTexture2D(&desc, nullptr, &m_texture2);
     if (FAILED(hr)) {
         printf("CreateTexture2D failed for texture2, hr=0x%08X", hr);
         return false;
     }
+    m_texture2.As(&m_mutex2);
 
     // Получаем интерфейсы IDXGIResource1 для создания именованных shared-ресурсов
     Microsoft::WRL::ComPtr<IDXGIResource1> resource1, resource2;

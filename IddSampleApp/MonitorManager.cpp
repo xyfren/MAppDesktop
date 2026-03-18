@@ -235,10 +235,16 @@ bool Monitor::Initialize(const wchar_t* frameReadyName,
     stagingDesc.MiscFlags = 0; // Staging нельзя расшарить между процессами
     stagingDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ; // Разрешаем чтение процессору
 
-    HRESULT hr = m_device->CreateTexture2D(&stagingDesc, nullptr, &m_stagingTexture);
+    HRESULT hr = m_device->CreateTexture2D(&stagingDesc, nullptr, &m_stagingTexture1);
     if (FAILED(hr)) {
         printf("Failed to create staging texture: 0x%08X\n", hr);
     }
+
+    hr = m_device->CreateTexture2D(&stagingDesc, nullptr, &m_stagingTexture2);
+    if (FAILED(hr)) {
+        printf("Failed to create staging texture: 0x%08X\n", hr);
+    }
+
 
     //m_gDisplay = new GpuDisplay(m_Config.width, m_Config.height, m_device.Get(), m_context.Get());
 
@@ -271,20 +277,32 @@ void Monitor::Run() {
         {
         case WAIT_OBJECT_0:
         {
-            ResetEvent(m_pVideoBuffer->GetFrameReadyEvent());
             auto frame = m_pVideoBuffer->GetLatestFrame();
 
             //std::cout << "Новый кадр " << "id = " << frame.frameId <<"; idx = " << frame.bufferIdx << std::endl;
             TimeProfiler::instance().stamp("createFrame");
-            D3D11_TEXTURE2D_DESC desk;
-            frame.texture->GetDesc(&desk);
 
+            IDXGIKeyedMutex* currentMutex = (frame.bufferIdx == 0) ? m_pVideoBuffer->m_mutex1.Get() : m_pVideoBuffer->m_mutex2.Get();
+            ID3D11Texture2D* stageTexture = (frame.bufferIdx == 0) ? m_stagingTexture1.Get() : m_stagingTexture2.Get();
 
-            m_context->CopyResource(m_stagingTexture.Get(), frame.texture);
+            HRESULT hr = currentMutex->AcquireSync(1, 16);
+            if (hr == WAIT_TIMEOUT) {
+                // Это не всегда ошибка, возможно драйвер просто не успел подготовить кадр
+                break;
+            }
+            else if (FAILED(hr)) {
+                printf("[GpuDisplay] AcquireSync failed: 0x%08X\n", hr);
+                break;
+            }
+			
+            m_context->CopyResource(stageTexture, frame.texture);
+
+            // 4. Освобождаем мьютекс как можно быстрее (Ключ 0 - отдаем драйверу)
+            hr = currentMutex->ReleaseSync(0);
 
             // 2. Мапим Staging-текстуру
             D3D11_MAPPED_SUBRESOURCE mappedResource;
-            HRESULT hr = m_context->Map(m_stagingTexture.Get(), 0, D3D11_MAP_READ, 0, &mappedResource);
+            hr = m_context->Map(stageTexture, 0, D3D11_MAP_READ, 0, &mappedResource);
             
             if (SUCCEEDED(hr))
             {
@@ -293,13 +311,13 @@ void Monitor::Run() {
 
                 m_sendFrameCallback(shared_from_this(), frame.frameId, frame.size, rowPitch, mappedResource.pData);
 
-                m_context->Unmap(m_stagingTexture.Get(), 0);
+                m_context->Unmap(stageTexture, 0);
             }
             else {
 				printf("Failed to map texture. Error: 0x%lx\n", hr);
             }
+            
 
-            m_pVideoBuffer->MarkFrameProcessed();
 
             break;
         }

@@ -18,11 +18,11 @@ public:
 
     // «апоминает метку времени дл€ конкретного событи€
     void stamp(const std::string& eventName) {
-        auto now = std::chrono::high_resolution_clock::now();
-        std::lock_guard<std::mutex> lock(mtx);
-        logQueue.push(eventName + ": " + std::to_string(
-            std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count()) + " ms");
-        cv.notify_one();
+        //auto now = std::chrono::high_resolution_clock::now();
+        //std::lock_guard<std::mutex> lock(mtx);
+        //logQueue.push(eventName + ": " + std::to_string(
+        //    std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count()) + " ms");
+        //cv.notify_one();
     }
 
 private:

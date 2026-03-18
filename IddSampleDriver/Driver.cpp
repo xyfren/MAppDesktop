@@ -875,7 +875,8 @@ bool VideoBuffer::Initialize(
             hr, memErr);
     }
     DRV_LOG("0x%p", m_texture1.Get());
-    
+    m_texture1.As(&m_mutex1);
+
     hr = m_device1->OpenSharedResourceByName(sharedTextureName2,
         DXGI_SHARED_RESOURCE_READ | DXGI_SHARED_RESOURCE_WRITE,
         IID_PPV_ARGS(&m_texture2));
@@ -885,6 +886,7 @@ bool VideoBuffer::Initialize(
             hr, memErr);
     }
     DRV_LOG("0x%p", m_texture2.Get());
+    m_texture2.As(&m_mutex2);
 
     m_pMappedBuffer = MapViewOfFile(m_hSharedInfo, FILE_MAP_ALL_ACCESS, 0, 0, 0);
     if (!m_pMappedBuffer) return false;
@@ -896,51 +898,26 @@ bool VideoBuffer::Initialize(
 
 void VideoBuffer::PushFrame(ID3D11Texture2D* sourceTexture, ID3D11DeviceContext* pContext, uint64_t frameId, uint64_t timestamp) {
     FrameHeader* header = (FrameHeader*)m_pMappedBuffer;
-
     uint16_t writeBuffer = header->freshBufferIdx ^ 1;
 
-    if (header->bufferProccesed[writeBuffer]) {
-        header->bufferProccesed[writeBuffer] = false;
-    }
-    else {
-        DWORD waitResult = WaitForSingleObject(
-            m_hFrameProcessedEvent,       
-            1000);
-        switch (waitResult)
-        {
-        case WAIT_OBJECT_0:
-        {
-            header->bufferProccesed[writeBuffer] = false;
-            ResetEvent(m_hFrameProcessedEvent);
-            break;
-        }
-        case WAIT_TIMEOUT:
-        {
-            header->bufferProccesed[writeBuffer] = true;
-            break;
-        }
-        default:
-        {
-            ResetEvent(m_hFrameProcessedEvent);
-            break;
-        }
-        }
-    }
+    IDXGIKeyedMutex* currentMutex = (writeBuffer == 0) ? m_mutex1.Get() : m_mutex2.Get();
+    ID3D11Texture2D* currentTexture = (writeBuffer == 0) ? m_texture1.Get() : m_texture2.Get();
 
-    if (writeBuffer == 0) {
-        m_context->CopyResource(m_texture1.Get(), sourceTexture);
-    }
-    else {
-        m_context->CopyResource(m_texture2.Get(), sourceTexture);
-    }
+    HRESULT hr = currentMutex->AcquireSync(0, 16);
+    if (SUCCEEDED(hr)) {
 
-    header->frameId = frameId;
-    header->timestamp = timestamp;
+        // 2. Копируем кадр
+        m_context->CopyResource(currentTexture, sourceTexture);
 
-    // Memory barrier to ensure all writes to the shared header are visible
-    // to the app process before it reads freshBufferIdx
-    MemoryBarrier();
-    header->freshBufferIdx = writeBuffer;
+        // Обновляем метаданные в разделяемой памяти
+        header->frameId = frameId;
+        header->timestamp = timestamp;
+        MemoryBarrier();
+        header->freshBufferIdx = writeBuffer;
+
+        // 3. Отпускаем текстуру с ключом '1' (Готово для чтения)
+        currentMutex->ReleaseSync(1);
+    }
 
     SetEvent(m_hFrameReadyEvent);
 }

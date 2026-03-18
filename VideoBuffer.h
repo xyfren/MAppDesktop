@@ -58,6 +58,8 @@ public:
 
 	HANDLE GetFrameReadyEvent() const;
 
+	Microsoft::WRL::ComPtr<IDXGIKeyedMutex> m_mutex1, m_mutex2;
+
 private:
 	void Cleanup();
 

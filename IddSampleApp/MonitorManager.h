@@ -55,7 +55,8 @@ private:
     Microsoft::WRL::ComPtr<ID3D11Device> m_device;
     Microsoft::WRL::ComPtr<ID3D11DeviceContext> m_context;
 
-    Microsoft::WRL::ComPtr<ID3D11Texture2D> m_stagingTexture;
+    Microsoft::WRL::ComPtr<ID3D11Texture2D> m_stagingTexture1;
+    Microsoft::WRL::ComPtr<ID3D11Texture2D> m_stagingTexture2;
 
     MonitorConfig m_Config;
     VideoBuffer* m_pVideoBuffer;
