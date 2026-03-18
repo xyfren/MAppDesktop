@@ -25,7 +25,7 @@ public:
     ~DataServer();
 
     void run(uint16_t port);
-    void send(const vector<uint8_t>& data, const udp::endpoint& targetEndpoint);
+    void send(shared_ptr<vector<uint8_t>> data, const udp::endpoint& targetEndpoint);
 
     // Send a pre-fragmented sequence of SPackets for one encoded video frame.
     // Uses a single shared allocation per frame batch to avoid per-packet heap

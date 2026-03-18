@@ -109,24 +109,29 @@ void ConnectionServer::stop() {
     });
 }
 
-void ConnectionServer::send(const vector<uint8_t>& data, shared_ptr<tcp::socket> socket) {
-    if (!socket || data.empty()) {
+void ConnectionServer::send(shared_ptr<vector<uint8_t>> pData, shared_ptr<tcp::socket> socket) {
+    if (!socket || pData->empty()) {
         return;
     }
 
-    // ВСЁ! Просто async_write через strand
+    // 1. Копируем данные в кучу СРАЗУ. 
+    // Теперь данные "живут" внутри shared_ptr и не зависят от времени жизни исходного span.
+
+    // 2. Захватываем data_ptr по значению. Счётчик ссылок +1.
     boost::asio::post(m_ioContext,
-        [this, data = vector<uint8_t>(data), socket]() mutable {
+        [this, pData, socket]() {
             if (!socket->is_open()) {
                 return;
             }
 
-            // Копируем данные для асинхронной операции
-            auto data_ptr = make_shared<vector<uint8_t>>(move(data));
+            // Теперь это безопасно, так как data_ptr владеет памятью
+            uint16_t packetType = *(reinterpret_cast<const uint16_t*>(pData->data()));
+            cout << "Type: " << packetType << endl;
 
             boost::asio::async_write(*socket,
-                boost::asio::buffer(*data_ptr),
-                [this, socket, data_ptr](boost::system::error_code ec, size_t bytes) {
+                boost::asio::buffer(*pData),
+                // 3. Захватываем data_ptr еще раз, чтобы он не удалился, пока идет запись в сокет
+                [this, socket, pData](boost::system::error_code ec, size_t bytes) {
                     if (ec) {
                         if (ec != boost::asio::error::operation_aborted) {
                             cerr << "Ошибка отправки: " << ec.message() << endl;
@@ -134,23 +139,77 @@ void ConnectionServer::send(const vector<uint8_t>& data, shared_ptr<tcp::socket>
                         removeConnection(socket);
                     }
                     else {
-                         cout << "Отправлено " << bytes << " байт" << endl;
+                        cout << "Отправлено " << bytes << " байт" << endl;
                     }
+                    // После завершения этого колбэка data_ptr выйдет из области видимости, 
+                    // счетчик упадет до 0, и память очистится. Никаких утечек!
                 });
         });
 }
 
-void ConnectionServer::broadcastData(const vector<uint8_t>& data) {
+void ConnectionServer::broadcastData(shared_ptr<vector<uint8_t>> pData) {
     lock_guard<mutex> lock(m_connectionsMutex);
     for (auto& socket : m_connections) {
         if (socket->is_open()) {
-            send(data, socket);
+            send(pData, socket);
         }
     }
 }
 
-void ConnectionServer::sendSPackets(std::span<const SPacket> packets, shared_ptr<tcp::socket> socket) {
+void ConnectionServer::broadcastData(shared_ptr<vector<uint8_t>> pData,
+    std::function<bool(const std::shared_ptr <tcp::socket> &) > filter) {
+    lock_guard<mutex> lock(m_connectionsMutex);
+    for (auto& socket : m_connections) {
+        if (socket->is_open() && filter(socket)) {
+            send(pData, socket);
+        }
+    }
+}
 
+void ConnectionServer::sendSPackets(span<const SPacket> packets, shared_ptr<tcp::socket> socket) {
+    if (!socket || !socket->is_open()) return;
+    if (packets.empty()) return;
+
+    const int MAX_IN_FLIGHT = static_cast<int>(packets.size() * 2);
+    if (m_packetsInFlight > MAX_IN_FLIGHT) {
+        printf("drop\n");
+        return;
+    }
+
+    m_packetsInFlight += static_cast<int>(packets.size());
+
+    for (size_t i = 0; i < packets.size(); ++i) {
+        const SPacket* pkt = &(packets[i]);
+        span<const uint8_t> pkt_span(reinterpret_cast<const uint8_t*>(pkt), pkt->dataSize);
+        boost::asio::post(m_ioContext,
+            [this, pkt_span, socket]() {  // Убрали создание нового span
+                if (!socket->is_open()) {
+                    return;
+                }
+
+                // Копируем данные для асинхронной операции
+                auto data_ptr = make_shared<vector<uint8_t>>(pkt_span.begin(), pkt_span.end());
+
+                boost::asio::async_write(*socket,
+                    boost::asio::buffer(*data_ptr),
+                    [this, socket, data_ptr](boost::system::error_code ec, size_t bytes) {
+                        m_packetsInFlight--;
+                        if (ec) {
+                            if (ec != boost::asio::error::operation_aborted) {
+                                cerr << "Ошибка отправки: " << ec.message() << endl;
+                            }
+                            removeConnection(socket);
+                        }
+                        else {
+                            cout << "Отправлено " << bytes << " байт" << endl;
+                            ++m_packetsSent;
+                            m_bytesSent += bytes;
+                        }
+                    });
+            });
+
+    }
+    ++m_framesSent;
 }
 
 set<shared_ptr<tcp::socket>> ConnectionServer::getConnections() {
@@ -168,8 +227,6 @@ void ConnectionServer::setMessageHandler(function<void(const vector<uint8_t>& da
 void ConnectionServer::setClosehandler(function<void(shared_ptr<tcp::socket> socket)> closeHandler) {
     this->closeHandler = closeHandler;
 }
-
-
 
 void ConnectionServer::addConnection(shared_ptr<tcp::socket> socket) {
     lock_guard<mutex> lock(m_connectionsMutex);

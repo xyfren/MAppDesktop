@@ -184,12 +184,14 @@ void MApp::removeMonitorCallback(std::shared_ptr<MClient> client) {
 void MApp::sendFrameCallback(std::shared_ptr<Monitor> pMonitor, uint64_t frameId, uint32_t frameSize, uint32_t rowPitch, void* frameData) {
 	std::shared_ptr<FrameManager> frameManager;
 	udp::endpoint targetEndpoint;
+	shared_ptr<tcp::socket> socket;
 	{
 		lock_guard<mutex> lock(monitorMutex);
 		auto it = m_MonitorFrameManager.find(pMonitor);
 		if (it == m_MonitorFrameManager.end()) return;
 		frameManager = it->second;
 		targetEndpoint = m_MonitorClient.left.at(pMonitor)->targetEndpoint;
+		socket = m_MonitorClient.left.at(pMonitor)->socket;
 	}
 
 	auto packets = frameManager->encodeFrame(
@@ -201,13 +203,12 @@ void MApp::sendFrameCallback(std::shared_ptr<Monitor> pMonitor, uint64_t frameId
 			m_pMServer->sendSPackets(packets, targetEndpoint);
 		}
 		else if (pMonitor->GetConfig().connectionType == ConnectionType::Usb) {
-		
+			m_pMServer->sendSPackets(packets, socket);
 		}
 		else {
-
+			cout << "Тип соединения не установлен" << endl;
 		}
 	}
-
 }
 
 VOID WINAPI

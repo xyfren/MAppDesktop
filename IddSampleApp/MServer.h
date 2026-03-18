@@ -33,6 +33,8 @@ public:
 	// Send a pre-fragmented sequence of SPackets for one encoded video frame.
 	void sendSPackets(std::span<const SPacket> packets, const udp::endpoint& targetEndpoint);
 
+	void sendSPackets(std::span<const SPacket> packets, shared_ptr<tcp::socket> socket);
+
 	void onOpen(shared_ptr<tcp::socket> socket);
 	void onMessageC(const vector<uint8_t>& data, shared_ptr<tcp::socket> socket); // connectionServer message
 	void onClose(shared_ptr<tcp::socket> socket);

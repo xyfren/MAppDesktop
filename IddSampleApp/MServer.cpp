@@ -77,9 +77,9 @@ void MServer::run() {
 
 void MServer::broadcastMessage(const string& msg) {
     string tcpstr = "TCP: " + msg;
-    vector<uint8_t> tcpbytes(tcpstr.begin(), tcpstr.end());
+    auto tcpbytes = make_shared<vector<uint8_t>>(tcpstr.begin(), tcpstr.end());
     string udpstr = "UDP: " + msg;
-    vector<uint8_t> udpbytes(udpstr.begin(), udpstr.end());
+    auto udpbytes = make_shared<vector<uint8_t>>(udpstr.begin(), udpstr.end());
     
     for (auto& [socket,client] : m_clients) {
         try {
@@ -99,12 +99,33 @@ void MServer::sendSPackets(std::span<const SPacket> packets, const udp::endpoint
     m_dataServer->sendSPackets(packets, targetEndpoint);
 }
 
+void MServer::sendSPackets(std::span<const SPacket> packets, shared_ptr<tcp::socket> socket) {
+    m_connectionServer->sendSPackets(packets, socket);
+}
+
+
 void MServer::onOpen(shared_ptr<tcp::socket> socket) {
+    //sendRDPacket();
+    RDPacket packet;
+    packet.ipAddress = boost::asio::ip::make_address_v4(m_serverLocalAddress).to_uint();
+    packet.connectionPort = m_connectionPort;
+    packet.dataPort = m_dataPort;
+
+    cout << packet.type << endl;
+    vector<uint8_t> vec = packet.bytes();
+    uint16_t packetType = *(reinterpret_cast<const uint16_t*>(vec.data()));
+    cout << packetType << endl;
+    m_connectionServer->send(make_shared<vector<uint8_t>>(packet.bytes()), socket);
     {
         lock_guard<mutex> lock(m_clientsMutex);
         m_clients[socket] = make_shared<MClient>(socket);
     }
     cout << "Новый клиент подключён (" << m_clients.size() << " активных)" << endl;
+
+    if (m_serverLocalAddress == "") return;
+    if (!m_clients.empty()) return;
+
+
 }
 
 void MServer::onMessageC(const vector<uint8_t>& data, shared_ptr<tcp::socket> socket) {
@@ -125,7 +146,7 @@ void MServer::onMessageC(const vector<uint8_t>& data, shared_ptr<tcp::socket> so
             m_clients[socket]->state = MClient::State::Authorized;
         }
         RAPacket responsePacket;
-        m_connectionServer->send(responsePacket.bytes(), socket);
+        m_connectionServer->send(make_shared<vector<uint8_t>> (responsePacket.bytes()), socket);
 
         MonitorConfig config;
         config.width = pack.width;
@@ -139,7 +160,8 @@ void MServer::onMessageC(const vector<uint8_t>& data, shared_ptr<tcp::socket> so
 }
 
 void MServer::onClose(shared_ptr<tcp::socket> socket) {
-    m_removeMonitorCallback(m_clients.at(socket));
+    if (m_clients.at(socket)->state == MClient::State::Authorized)
+        m_removeMonitorCallback(m_clients.at(socket));
     {
         lock_guard<mutex> lock(m_clientsMutex);
         m_clients.erase(socket);
@@ -178,5 +200,12 @@ void MServer::sendRDPacket() {
         boost::asio::ip::address_v4::broadcast(),
         m_dataPort  // или нужный вам порт
     );
-    m_dataServer->send(packet.bytes(), broadcastEndpoint);
+    m_dataServer->send(make_shared<vector<uint8_t>>(packet.bytes()), broadcastEndpoint);
+    m_connectionServer->broadcastData(make_shared<vector<uint8_t>>(packet.bytes()), [this](const shared_ptr<tcp::socket>& s) {
+        auto it = m_clients.find(s);
+        if (it != m_clients.end() && it->second->state == MClient::State::Connected) {
+            return true;
+        }
+        return false;
+    });
 }

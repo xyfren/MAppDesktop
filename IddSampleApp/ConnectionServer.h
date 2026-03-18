@@ -30,8 +30,10 @@ public:
     void run(uint16_t port);
     void stop();
 
-    void send(const vector<uint8_t>& data, shared_ptr<tcp::socket> socket);
-    void broadcastData(const vector<uint8_t>& data);
+    void send(shared_ptr<vector<uint8_t>> pData, shared_ptr<tcp::socket> socket);
+    void broadcastData(shared_ptr<vector<uint8_t>> pData);
+    void broadcastData(shared_ptr<vector<uint8_t>> pData, std::function<bool(const std::shared_ptr<tcp::socket>&)> filter);
+
     void sendSPackets(std::span<const SPacket> packets, shared_ptr<tcp::socket> socket);
 
     set<shared_ptr<tcp::socket>> getConnections();
@@ -59,5 +61,11 @@ private:
 
     static const size_t BUFFER_SIZE = 65536;
     //array<uint8_t, BUFFER_SIZE> m_buffer;
+    std::atomic<size_t> m_framesSent{ 0 };
+    std::atomic<size_t> m_packetsSent{ 0 };
+    std::atomic<size_t> m_bytesSent{ 0 };
+
+    std::atomic<int> m_packetsInFlight{ 0 };
+
 };
 

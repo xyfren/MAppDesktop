@@ -49,16 +49,15 @@ void DataServer::handleUdpReceive() {
         });
 }
 
-void DataServer::send(const vector<uint8_t>& data, const udp::endpoint& targetEndpoint) {
+void DataServer::send(shared_ptr<vector<uint8_t>> data, const udp::endpoint& targetEndpoint) {
     if (!m_udpSocket) return;
     if (!m_udpSocket->is_open()) return;
 
-    auto sendBuffer = make_shared<vector<uint8_t>>(data);
 
     m_udpSocket->async_send_to(
-        boost::asio::buffer(*sendBuffer),
+        boost::asio::buffer(*data),
         targetEndpoint,
-        [this, sendBuffer](boost::system::error_code ec, size_t bytes_sent) {
+        [this, data](boost::system::error_code ec, size_t bytes_sent) {
             handleSendResult(ec, bytes_sent);
         }
     );
