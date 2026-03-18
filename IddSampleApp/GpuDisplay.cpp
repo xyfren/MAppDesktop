@@ -65,30 +65,77 @@ bool GpuDisplay::Initialize()
     hr = m_swapChain->GetBuffer(0, IID_PPV_ARGS(&m_backBuffer));
     if (FAILED(hr)) return false;
 
+
+
     return true;
 }
 
-bool GpuDisplay::ShowFrame(ID3D11Texture2D* frameTexture) {
-    if (!frameTexture || !m_context || !m_swapChain) {
-        printf("Invalid parameters\n");
+bool GpuDisplay::ShowFrame(ID3D11Texture2D* frameTexture, IDXGIKeyedMutex* mutex) {
+    if (!frameTexture || !m_context || !m_swapChain || !mutex) {
+        printf("[GpuDisplay] Invalid parameters: tex=%p, ctx=%p, sc=%p, mtx=%p\n",
+            frameTexture, m_context.Get(), m_swapChain.Get(), mutex);
         return false;
     }
 
-    // Re-acquire back buffer before each frame (required for FLIP_DISCARD swap effect,
-    // because after Present() the internal buffer rotates and the old reference becomes stale)
-    m_backBuffer.Reset();
-    HRESULT hr = m_swapChain->GetBuffer(0, IID_PPV_ARGS(&m_backBuffer));
+    // 1. Попытка захвата мьютекса
+    HRESULT hr = mutex->AcquireSync(1, 16);
+    if (hr == WAIT_TIMEOUT) {
+        // Это не всегда ошибка, возможно драйвер просто не успел подготовить кадр
+        return false;
+    }
+    else if (FAILED(hr)) {
+        printf("[GpuDisplay] AcquireSync failed: 0x%08X\n", hr);
+        return false;
+    }
+
+    // 2. Инициализация промежуточной текстуры (если еще не создана)
+    //if (!m_internalCopy) {
+    //    D3D11_TEXTURE2D_DESC desc = {};
+    //    frameTexture->GetDesc(&desc);
+
+    //    // Убираем флаги мьютекса для внутренней копии
+    //    desc.MiscFlags = 0;
+    //    desc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET;
+    //    desc.Usage = D3D11_USAGE_DEFAULT;
+
+    //    hr = m_device->CreateTexture2D(&desc, nullptr, &m_internalCopy);
+    //    if (FAILED(hr)) {
+    //        printf("[GpuDisplay] CreateTexture2D (internal) failed: 0x%08X\n", hr);
+    //        mutex->ReleaseSync(0); // Обязательно отпускаем, иначе драйвер зависнет
+    //        return false;
+    //    }
+    //    printf("[GpuDisplay] Internal copy texture created successfully\n");
+    //}
+
+    // 3. Копирование из Shared текстуры во внутреннюю
+    // Используем CopySubresourceRegion, так как у текстур разные MiscFlags
+    //m_context->CopySubresourceRegion(m_internalCopy.Get(), 0, 0, 0, 0, frameTexture, 0, nullptr);
+    m_context->CopyResource(m_backBuffer.Get(),frameTexture); // test
+    // 4. Освобождаем мьютекс как можно быстрее (Ключ 0 - отдаем драйверу)
+    hr = mutex->ReleaseSync(0);
     if (FAILED(hr)) {
-        printf("GetBuffer failed: 0x%08X\n", hr);
+        printf("[GpuDisplay] ReleaseSync failed: 0x%08X\n", hr);
+        // Продолжаем, так как данные уже скопированы во внутреннюю текстуру
+    }
+
+    // 5. Получаем BackBuffer из SwapChain
+    m_backBuffer.Reset();
+    hr = m_swapChain->GetBuffer(0, IID_PPV_ARGS(&m_backBuffer));
+    if (FAILED(hr)) {
+        printf("[GpuDisplay] GetBuffer failed: 0x%08X\n", hr);
         return false;
     }
 
-    m_context->CopyResource(m_backBuffer.Get(), frameTexture);
+    // 6. Копируем во фронтальный буфер и выводим
+    //m_context->CopyResource(m_backBuffer.Get(), m_internalCopy.Get());
 
-    // Present with VSync (SyncInterval=1) for smooth, consistent frame pacing
+    // Present вызываем ОДИН раз
     hr = m_swapChain->Present(1, 0);
     if (FAILED(hr)) {
-        printf("Present failed: 0x%08X\n", hr);
+        printf("[GpuDisplay] Present failed: 0x%08X\n", hr);
+        if (hr == DXGI_ERROR_DEVICE_REMOVED || hr == DXGI_ERROR_DEVICE_RESET) {
+            printf("[GpuDisplay] Device lost! Need to re-initialize D3D11.\n");
+        }
         return false;
     }
 

@@ -62,6 +62,8 @@ public:
 
 	HANDLE GetFrameReadyEvent() const;
 
+	Microsoft::WRL::ComPtr<IDXGIKeyedMutex> m_mutex1, m_mutex2;
+
 private:
 	void Cleanup();
 
@@ -76,6 +78,7 @@ private:
 	void* m_pMappedBuffer = nullptr;
 
 	Microsoft::WRL::ComPtr<ID3D11Texture2D> m_texture1, m_texture2;
+
 	Microsoft::WRL::ComPtr<ID3D11Device1> m_device1;
 	Microsoft::WRL::ComPtr<ID3D11DeviceContext> m_context;
 };

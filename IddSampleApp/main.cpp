@@ -100,7 +100,7 @@ int __cdecl wmain(int argc, wchar_t *argv[])
             switch (ch) {
             case '1':
                 printf("\n\nCreating new monitor...\n");
-                monManager->AddMonitor(0U, 1600U, 900U, 4U, 120U);
+                monManager->AddMonitor(0U, 1600U, 900U, 4U, 60U);
                 printf("\nEnter your choice (1-4): ");
                 fflush(stdout);
                 break;

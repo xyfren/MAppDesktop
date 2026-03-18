@@ -246,15 +246,25 @@ void Monitor::Run() {
         {
         case WAIT_OBJECT_0:
         {
-            //ResetEvent(m_pVideoBuffer->GetFrameReadyEvent());
             auto frame = m_pVideoBuffer->GetLatestFrame();
-            m_gDisplay->ShowFrame(frame.texture);
-            //std::cout << "Новый кадр " << "id = " << frame.frameId <<"; idx = " << frame.bufferIdx << std::endl;
-   
-            m_pVideoBuffer->MarkFrameProcessed();
+			//std::cout << "Получен кадр: ID=" << frame.frameId << ", timestamp=" << frame.timestamp << ", size=" << frame.size << " bytes" <<std::endl;
+
+            IDXGIKeyedMutex* currentMutex = (frame.bufferIdx == 0) ? m_pVideoBuffer->m_mutex1.Get() : m_pVideoBuffer->m_mutex2.Get();
+
+            // 1. Запрашиваем доступ к текстуре. Ждем ключ '1' (Кадр от драйвера готов)
+            // Здесь мы используем небольшое время ожидания, например 16мс, чтобы не повиснуть навсегда
+            //HRESULT hr = currentMutex->AcquireSync(1, 16);
+            //if (SUCCEEDED(hr)) {
+
+                // 2. БЕЗОПАСНО читаем/отрисовываем/кодируем текстуру
+            m_gDisplay->ShowFrame(frame.texture,currentMutex);
 
             if (!m_gDisplay->ProcessEvents())
                 m_running = false;
+
+                // 3. Отпускаем текстуру с ключом '0' (Возвращаем драйверу)
+                //currentMutex->ReleaseSync(0);
+            //}
 
             break;
         }

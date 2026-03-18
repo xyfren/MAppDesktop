@@ -10,7 +10,7 @@ public:
     ~GpuDisplay();
 
     bool Initialize();
-    bool ShowFrame(ID3D11Texture2D* frameTexture);
+    bool ShowFrame(ID3D11Texture2D* frameTexture, IDXGIKeyedMutex* mutex);
     bool ProcessEvents(); // returns false if quit requested
 
 private:
@@ -20,4 +20,5 @@ private:
     Microsoft::WRL::ComPtr<ID3D11DeviceContext> m_context;
     Microsoft::WRL::ComPtr<IDXGISwapChain> m_swapChain;
     Microsoft::WRL::ComPtr<ID3D11Texture2D> m_backBuffer;
+    //Microsoft::WRL::ComPtr<ID3D11Texture2D> m_internalCopy;
 };
