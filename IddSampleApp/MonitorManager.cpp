@@ -251,20 +251,10 @@ void Monitor::Run() {
 
             IDXGIKeyedMutex* currentMutex = (frame.bufferIdx == 0) ? m_pVideoBuffer->m_mutex1.Get() : m_pVideoBuffer->m_mutex2.Get();
 
-            // 1. Запрашиваем доступ к текстуре. Ждем ключ '1' (Кадр от драйвера готов)
-            // Здесь мы используем небольшое время ожидания, например 16мс, чтобы не повиснуть навсегда
-            //HRESULT hr = currentMutex->AcquireSync(1, 16);
-            //if (SUCCEEDED(hr)) {
-
-                // 2. БЕЗОПАСНО читаем/отрисовываем/кодируем текстуру
             m_gDisplay->ShowFrame(frame.texture,currentMutex);
 
             if (!m_gDisplay->ProcessEvents())
                 m_running = false;
-
-                // 3. Отпускаем текстуру с ключом '0' (Возвращаем драйверу)
-                //currentMutex->ReleaseSync(0);
-            //}
 
             break;
         }

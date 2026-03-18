@@ -152,7 +152,6 @@ VideoBuffer::Frame VideoBuffer::GetLatestFrame()
     if (!m_pMappedBuffer) return frame;
     FrameHeader* header = (FrameHeader*)m_pMappedBuffer;
     
-
     header->processingBufferIdx = header->freshBufferIdx;
     //header->bufferProccesed[header->processingBufferIdx] = false;
     frame.texture = (header->processingBufferIdx == 0) ? m_texture1.Get() : m_texture2.Get();

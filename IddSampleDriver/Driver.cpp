@@ -901,7 +901,7 @@ void VideoBuffer::PushFrame(ID3D11Texture2D* sourceTexture, ID3D11DeviceContext*
     IDXGIKeyedMutex* currentMutex = (writeBuffer == 0) ? m_mutex1.Get() : m_mutex2.Get();
     ID3D11Texture2D* currentTexture = (writeBuffer == 0) ? m_texture1.Get() : m_texture2.Get();
 
-    HRESULT hr = currentMutex->AcquireSync(0, 160);
+    HRESULT hr = currentMutex->AcquireSync(0, 16);
     if (SUCCEEDED(hr)) {
 
         // 2. Копируем кадр
