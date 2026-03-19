@@ -151,7 +151,7 @@ void MServer::onMessageC(const vector<uint8_t>& data, shared_ptr<tcp::socket> so
         MonitorConfig config;
         config.width = pack.width;
         config.height = pack.height;
-        config.refreshRate = 60;
+        config.refreshRate = 30;
         config.coderType = pack.coderType;
         config.connectionType = pack.connectionType;
         cout << (int)config.connectionType << endl;;

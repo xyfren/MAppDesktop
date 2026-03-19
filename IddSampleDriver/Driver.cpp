@@ -903,23 +903,32 @@ void VideoBuffer::PushFrame(ID3D11Texture2D* sourceTexture, ID3D11DeviceContext*
     IDXGIKeyedMutex* currentMutex = (writeBuffer == 0) ? m_mutex1.Get() : m_mutex2.Get();
     ID3D11Texture2D* currentTexture = (writeBuffer == 0) ? m_texture1.Get() : m_texture2.Get();
 
-    HRESULT hr = currentMutex->AcquireSync(0, 16);
-    if (SUCCEEDED(hr)) {
+    HRESULT hr = currentMutex->AcquireSync(0, 0);
 
-        // 2. Копируем кадр
-        m_context->CopyResource(currentTexture, sourceTexture);
+    if (hr == S_OK) {
+        // Копируем данные, так как доступ гарантирован
+        pContext->CopyResource(currentTexture, sourceTexture);
 
-        // Обновляем метаданные в разделяемой памяти
         header->frameId = frameId;
         header->timestamp = timestamp;
         MemoryBarrier();
         header->freshBufferIdx = writeBuffer;
 
-        // 3. Отпускаем текстуру с ключом '1' (Готово для чтения)
-        currentMutex->ReleaseSync(1);
-    }
+        currentMutex->ReleaseSync(1); // Отдаем приложению (Ключ 1)
 
-    SetEvent(m_hFrameReadyEvent);
+        // Будим приложение только если реально записали новый кадр
+        SetEvent(m_hFrameReadyEvent);
+    }
+    else if (hr == WAIT_TIMEOUT) {
+        // Пишем это только если хотим отслеживать пропуски кадров
+        DRV_LOG("Frame skipped (App is busy)");
+    }
+    else {
+        // Если буфер занят — просто выходим. 
+        // Система вызовет нас снова для следующего кадра (через 8-16мс).
+        // Это лучше, чем повесить весь драйвер.
+        DRV_LOG("PushFrame: Mutex busy, frame skipped to prevent TDR.");
+    }
 }
 
 void VideoBuffer::MarkFrameProcessed() {

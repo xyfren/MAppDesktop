@@ -282,16 +282,26 @@ void Monitor::Run() {
             //std::cout << "Новый кадр " << "id = " << frame.frameId <<"; idx = " << frame.bufferIdx << std::endl;
             TimeProfiler::instance().stamp("createFrame");
 
+            uint16_t staleIdx = frame.bufferIdx ^ 1;
+            IDXGIKeyedMutex* staleMutex = (staleIdx == 0) ? m_pVideoBuffer->m_mutex1.Get() : m_pVideoBuffer->m_mutex2.Get();
+
+            // Пытаемся забрать его с таймаутом 0. 
+            // Если он висит с ключом 1 (забыт), мы его тут же сбросим на 0.
+            if (staleMutex->AcquireSync(1, 0) == S_OK) {
+                staleMutex->ReleaseSync(0);
+            }
+
             IDXGIKeyedMutex* currentMutex = (frame.bufferIdx == 0) ? m_pVideoBuffer->m_mutex1.Get() : m_pVideoBuffer->m_mutex2.Get();
             ID3D11Texture2D* stageTexture = (frame.bufferIdx == 0) ? m_stagingTexture1.Get() : m_stagingTexture2.Get();
 
             HRESULT hr = currentMutex->AcquireSync(1, 16);
             if (hr == WAIT_TIMEOUT) {
-                // Это не всегда ошибка, возможно драйвер просто не успел подготовить кадр
+                printf("Timeout");
                 break;
             }
             else if (FAILED(hr)) {
                 printf("[GpuDisplay] AcquireSync failed: 0x%08X\n", hr);
+
                 break;
             }
 			
@@ -301,15 +311,15 @@ void Monitor::Run() {
             hr = currentMutex->ReleaseSync(0);
 
             // 2. Мапим Staging-текстуру
-            D3D11_MAPPED_SUBRESOURCE mappedResource;
-            hr = m_context->Map(stageTexture, 0, D3D11_MAP_READ, 0, &mappedResource);
+           
+            hr = m_context->Map(stageTexture, 0, D3D11_MAP_READ, 0, &m_mappedResource);
             
             if (SUCCEEDED(hr))
             {
 
-                UINT rowPitch = mappedResource.RowPitch;
+                UINT rowPitch = m_mappedResource.RowPitch;
 
-                m_sendFrameCallback(shared_from_this(), frame.frameId, frame.size, rowPitch, mappedResource.pData);
+                m_sendFrameCallback(shared_from_this(), frame.frameId, frame.size, rowPitch, m_mappedResource.pData);
 
                 m_context->Unmap(stageTexture, 0);
             }

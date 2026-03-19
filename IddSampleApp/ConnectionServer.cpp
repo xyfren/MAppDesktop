@@ -171,13 +171,13 @@ void ConnectionServer::sendSPackets(span<const SPacket> packets, shared_ptr<tcp:
     if (!socket || !socket->is_open()) return;
     if (packets.empty()) return;
 
-    //const int MAX_IN_FLIGHT = static_cast<int>(packets.size() * 2);
-    //if (m_packetsInFlight > MAX_IN_FLIGHT) {
-    //    printf("drop\n");
-    //    return;
-    //}
+    const int MAX_IN_FLIGHT = static_cast<int>(packets.size() * 2);
+    if (m_packetsInFlight > 0) {
+        printf("drop\n");
+        return;
+    }
 
-    //m_packetsInFlight += static_cast<int>(packets.size());
+    m_packetsInFlight += static_cast<int>(packets.size());
 
     //auto data_ptr = make_shared<vector<SPacket>>(packets.begin(), packets.end());
     //boost::asio::post(m_ioContext,
