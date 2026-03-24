@@ -26,11 +26,12 @@ enum class CoderType {
 };
 
 struct MonitorConfig {
+    uint16_t monitorId;
     uint16_t byteDepth;
     uint16_t width;
     uint16_t height;
     uint16_t refreshRate;
-    uint16_t monitorId;
+    uint16_t quality;
     ConnectionType connectionType;
     CoderType coderType;
     bool enabled;

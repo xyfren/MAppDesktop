@@ -41,7 +41,8 @@ int __cdecl wmain(int argc, wchar_t *argv[])
 	std::locale::global(loc);
 	std::cout.imbue(loc);
 	//printAvailableEncoders();
-	MApp p_app;;
-	return p_app.run();
-	
+
+    MApp p_app;
+    return p_app.run();
+
 }

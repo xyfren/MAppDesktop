@@ -151,16 +151,25 @@ void MServer::onMessageC(const vector<uint8_t>& data, shared_ptr<tcp::socket> so
         MonitorConfig config;
         config.width = pack.width;
         config.height = pack.height;
-        config.refreshRate = 30;
+        config.refreshRate = pack.refreshRate;
+        config.quality = pack.quality;
         config.coderType = pack.coderType;
         config.connectionType = pack.connectionType;
-        cout << (int)config.connectionType << endl;;
+
+        // Logging
+        std::cout << "Monitor configuration applied:" << std::endl;
+        std::cout << "  Width: " << config.width << std::endl;
+        std::cout << "  Height: " << config.height << std::endl;
+        std::cout << "  Refresh Rate: " << config.refreshRate << " Hz" << std::endl;
+        std::cout << "  Quality: " << config.quality << std::endl;
+        std::cout << "  Coder Type: " << (int) config.coderType << std::endl;
+        std::cout << "  Connection Type: " << (int) config.connectionType << std::endl;
 
         m_createMonitorCallback(config,m_clients.at(socket));
     }
 }
 
-void MServer::onClose(shared_ptr<tcp::socket> socket) {
+void MServer::onClose(shared_ptr<tcp::socket> socket) {;
     if (m_clients.at(socket)->state == MClient::State::Authorized)
         m_removeMonitorCallback(m_clients.at(socket));
     {

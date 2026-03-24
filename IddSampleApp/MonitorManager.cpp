@@ -245,7 +245,6 @@ bool Monitor::Initialize(const wchar_t* frameReadyName,
         printf("Failed to create staging texture: 0x%08X\n", hr);
     }
 
-
     //m_gDisplay = new GpuDisplay(m_Config.width, m_Config.height, m_device.Get(), m_context.Get());
 
     m_pVideoBuffer = new VideoBuffer(m_Config.width, m_Config.height, m_Config.byteDepth);
@@ -301,25 +300,25 @@ void Monitor::Run() {
             }
             else if (FAILED(hr)) {
                 printf("[GpuDisplay] AcquireSync failed: 0x%08X\n", hr);
-
                 break;
             }
 			
             m_context->CopyResource(stageTexture, frame.texture);
-
             // 4. Освобождаем мьютекс как можно быстрее (Ключ 0 - отдаем драйверу)
             hr = currentMutex->ReleaseSync(0);
 
             // 2. Мапим Staging-текстуру
+            D3D11_MAPPED_SUBRESOURCE mappedResource;
            
-            hr = m_context->Map(stageTexture, 0, D3D11_MAP_READ, 0, &m_mappedResource);
+            hr = m_context->Map(stageTexture, 0, D3D11_MAP_READ, 0, &mappedResource);
             
+
             if (SUCCEEDED(hr))
             {
 
-                UINT rowPitch = m_mappedResource.RowPitch;
+                UINT rowPitch = mappedResource.RowPitch;
 
-                m_sendFrameCallback(shared_from_this(), frame.frameId, frame.size, rowPitch, m_mappedResource.pData);
+                m_sendFrameCallback(shared_from_this(), frame.frameId, frame.size, rowPitch, mappedResource.pData);
 
                 m_context->Unmap(stageTexture, 0);
             }

@@ -27,7 +27,7 @@ std::span<const uint8_t> JpegEncoder::encode(const uint8_t* bgraData, uint32_t r
     m_jpegSize = 0;
 
     // Настройки сжатия (качество 80, субсемплинг 4:2:0)
-    const int jpegQual = 50;
+    const int jpegQual = m_config.quality;
     const int flags = TJFLAG_NOREALLOC | TJFLAG_FASTUPSAMPLE;
 
     int ret = tjCompress2(

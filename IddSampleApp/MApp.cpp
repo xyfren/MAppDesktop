@@ -57,6 +57,11 @@ MApp::~MApp() {
 
 int MApp::run() {
 	HANDLE hEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+	if (!hEvent) {
+		printf("Failed to create event\n");
+		return 1;
+	}
+
 	HSWDEVICE hSwDevice;
 	SW_DEVICE_CREATE_INFO createInfo = { 0 };
 
@@ -78,15 +83,18 @@ int MApp::run() {
 		CreationCallback,
 		&hEvent,
 		&hSwDevice);
+
 	if (FAILED(hr))
 	{
 		printf("SwDeviceCreate failed with 0x%lx\n", hr);
+		CloseHandle(hEvent);
 		return 1;
 	}
 
 	// Wait for callback to signal that the device has been created
 	printf("Waiting for device to be created....\n");
 	DWORD waitResult = WaitForSingleObject(hEvent, 10000);
+
 	if (waitResult != WAIT_OBJECT_0)
 	{
 		printf("Wait for device creation failed\n");
@@ -94,7 +102,7 @@ int MApp::run() {
 	}
 	if (!m_pMonitorManager->Initialize()) {
 		cout << "Failed to initialize MonitorManager" << endl;	
-		return -1;
+		return 1;
 	}
 
 	m_pMServer->setCreateMonitorCallback(bind(&MApp::createMonitorCallback, this, placeholders::_1, placeholders::_2));
@@ -221,6 +229,7 @@ CreationCallback(
 )
 {
 	HANDLE hEvent = *(HANDLE*)pContext;
+	printf("dfsfs");
 	SetEvent(hEvent);
 	UNREFERENCED_PARAMETER(hSwDevice);
 	UNREFERENCED_PARAMETER(hrCreateResult);

@@ -7,11 +7,12 @@
 #pragma pack(push, 1)
 struct APacket {
     uint16_t type = 100;
+    uint16_t udpPort = 0;
+
     uint16_t width = 0;
     uint16_t height = 0;
     uint16_t refreshRate = 0;
-    uint16_t udpPort = 0;
-
+    uint16_t quality = 0;
     CoderType coderType = CoderType::Null;
     ConnectionType connectionType = ConnectionType::Null;
 

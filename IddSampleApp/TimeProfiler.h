@@ -27,11 +27,18 @@ public:
 
 private:
     TimeProfiler() {
+        m_running = true;
         worker = std::thread(&TimeProfiler::processLogs, this);
+        worker.detach();
+    }
+
+    ~TimeProfiler() {
+        m_running = false;
+        cv.notify_one();
     }
 
     void processLogs() {
-        while (true) {
+        while (m_running) {
             std::unique_lock<std::mutex> lock(mtx);
             cv.wait(lock, [this] { return !logQueue.empty(); });
 
@@ -46,4 +53,5 @@ private:
     std::queue<std::string> logQueue;
     std::mutex mtx;
     std::condition_variable cv;
+    bool m_running = false;
 };

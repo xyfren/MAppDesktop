@@ -90,6 +90,8 @@ boost::asio::awaitable<void> ConnectionServer::clientHandler(shared_ptr<tcp::soc
     // Удаляем соединение
     removeConnection(socket);
 
+    socket->close();
+
     if (closeHandler) {
         closeHandler(socket);
     }

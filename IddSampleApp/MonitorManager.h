@@ -57,8 +57,6 @@ private:
 
     Microsoft::WRL::ComPtr<ID3D11Texture2D> m_stagingTexture1;
     Microsoft::WRL::ComPtr<ID3D11Texture2D> m_stagingTexture2;
-    
-    D3D11_MAPPED_SUBRESOURCE m_mappedResource;
 
     MonitorConfig m_Config;
     VideoBuffer* m_pVideoBuffer;
