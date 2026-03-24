@@ -158,6 +158,7 @@ xcopy /y "%LOCALAPPDATA%\Android\Sdk\platform-tools\AdbWinUsbApi.dll" "$(OutDir)
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="AppCore.cpp" />
     <ClCompile Include="ConnectionServer.cpp" />
     <ClCompile Include="DataServer.cpp" />
     <ClCompile Include="FFmpegEncoder.cpp" />
@@ -165,6 +166,7 @@ xcopy /y "%LOCALAPPDATA%\Android\Sdk\platform-tools\AdbWinUsbApi.dll" "$(OutDir)
     <ClCompile Include="GpuDisplay.cpp" />
     <ClCompile Include="JpegEncoder.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="AppWindow.cpp" />
     <ClCompile Include="MApp.cpp" />
     <ClCompile Include="MonitorManager.cpp" />
     <ClCompile Include="MServer.cpp" />
@@ -175,14 +177,16 @@ xcopy /y "%LOCALAPPDATA%\Android\Sdk\platform-tools\AdbWinUsbApi.dll" "$(OutDir)
     <ClInclude Include="..\Common.h" />
     <ClInclude Include="..\VideoBuffer.h" />
     <ClInclude Include="APacket.h" />
+    <ClInclude Include="AppCore.h" />
     <ClInclude Include="ConnectionServer.h" />
     <ClInclude Include="DataServer.h" />
     <ClInclude Include="DPacket.h" />
     <ClInclude Include="FFmpegEncoder.h" />
     <ClInclude Include="IEncoder.h" />
     <ClInclude Include="JpegEncoder.h" />
-    <ClInclude Include="MAppSettings.h" />
+    <ClInclude Include="AppWindow.h" />
     <ClInclude Include="MUsbManager.h" />
+    <ClInclude Include="resource.h" />
     <ClInclude Include="SPacket.h" />
     <ClInclude Include="FPacket.h" />
     <ClInclude Include="FrameManager.h" />
@@ -197,6 +201,9 @@ xcopy /y "%LOCALAPPDATA%\Android\Sdk\platform-tools\AdbWinUsbApi.dll" "$(OutDir)
     <ProjectReference Include="..\IddSampleDriver\IddSampleDriver.vcxproj">
       <Project>{2d54cb75-8b17-4f11-97dc-847b0244cd46}</Project>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Resource.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

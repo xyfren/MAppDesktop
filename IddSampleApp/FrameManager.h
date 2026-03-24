@@ -5,7 +5,6 @@
 #include <cstdint>
 #include <memory>
 
-#include "MAppSettings.h"
 #include "IEncoder.h"
 #include "FFmpegEncoder.h"
 #include "JpegEncoder.h"

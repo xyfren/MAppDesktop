@@ -50,6 +50,8 @@
     <ClCompile Include="MUsbManager.cpp">
       <Filter>UsbManager</Filter>
     </ClCompile>
+    <ClCompile Include="AppWindow.cpp" />
+    <ClCompile Include="AppCore.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="APacket.h">
@@ -99,10 +101,15 @@
     <ClInclude Include="IEncoder.h">
       <Filter>FrameManager</Filter>
     </ClInclude>
-    <ClInclude Include="MAppSettings.h" />
     <ClInclude Include="MUsbManager.h">
       <Filter>UsbManager</Filter>
     </ClInclude>
     <ClInclude Include="TimeProfiler.h" />
+    <ClInclude Include="resource.h" />
+    <ClInclude Include="AppWindow.h" />
+    <ClInclude Include="AppCore.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Resource.rc" />
   </ItemGroup>
 </Project>

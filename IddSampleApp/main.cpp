@@ -1,4 +1,5 @@
-﻿#include "MApp.h"
+﻿#include "AppCore.h"
+#include "AppWindow.h"
 #include "boost/locale.hpp"
 
 extern "C" {
@@ -39,10 +40,11 @@ int __cdecl wmain(int argc, wchar_t *argv[])
 	boost::locale::generator gen;
 	std::locale loc = gen("en_US.UTF-8");
 	std::locale::global(loc);
-	std::cout.imbue(loc);
-	//printAvailableEncoders();
 
-    MApp p_app;
-    return p_app.run();
+    auto core = std::make_shared<AppCore>();
+    core->start();
 
+    AppWindow win;
+    win.init(GetModuleHandle(nullptr), core);
+    return win.runMessageLoop();
 }

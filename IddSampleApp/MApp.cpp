@@ -16,28 +16,6 @@ CreationCallback(
 #include <stdio.h>
 #include <ws2tcpip.h>
 
-void MApp::PrintIpTable() {
-	PMIB_IPADDRTABLE pIPAddrTable = NULL;
-	DWORD dwSize = 0;
-
-	// Резервируем память (как в предыдущем примере)
-	GetIpAddrTable(NULL, &dwSize, 0);
-	pIPAddrTable = (MIB_IPADDRTABLE*)malloc(dwSize);
-
-	if (GetIpAddrTable(pIPAddrTable, &dwSize, 0) == NO_ERROR) {
-		for (int i = 0; i < (int)pIPAddrTable->dwNumEntries; i++) {
-			char szIPAddr[INET_ADDRSTRLEN]; // Буфер для строки IP
-
-			// Конвертируем DWORD адрес в строку
-			// Используем &pIPAddrTable->table[i].dwAddr напрямую
-			InetNtopA(AF_INET, &(pIPAddrTable->table[i].dwAddr), szIPAddr, INET_ADDRSTRLEN);
-
-			printf("Запись [%d]: %s\n", i, szIPAddr);
-		}
-	}
-	if (pIPAddrTable) free(pIPAddrTable);
-}
-
 
 MApp::MApp() {
 	m_pMonitorManager = new MonitorManager();
@@ -53,16 +31,19 @@ MApp::~MApp() {
 	if (m_pMServer) {
 		delete m_pMServer;
 	}
+
+	if (m_pMUsbManager) {
+		delete m_pMUsbManager;
+	}
 }
 
-int MApp::run() {
+int MApp::initDevice() {
 	HANDLE hEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
 	if (!hEvent) {
 		printf("Failed to create event\n");
 		return 1;
 	}
-
-	HSWDEVICE hSwDevice;
+	
 	SW_DEVICE_CREATE_INFO createInfo = { 0 };
 
 	createInfo.cbSize = sizeof(createInfo);
@@ -82,7 +63,7 @@ int MApp::run() {
 		nullptr,
 		CreationCallback,
 		&hEvent,
-		&hSwDevice);
+		&m_hSwDevice);
 
 	if (FAILED(hr))
 	{
@@ -91,7 +72,6 @@ int MApp::run() {
 		return 1;
 	}
 
-	// Wait for callback to signal that the device has been created
 	printf("Waiting for device to be created....\n");
 	DWORD waitResult = WaitForSingleObject(hEvent, 10000);
 
@@ -100,39 +80,93 @@ int MApp::run() {
 		printf("Wait for device creation failed\n");
 		return 1;
 	}
-	if (!m_pMonitorManager->Initialize()) {
-		cout << "Failed to initialize MonitorManager" << endl;	
-		return 1;
-	}
+	printf("Device created successfuly");
+	
+	return 0;
+}
 
+int MApp::initServer() {
 	m_pMServer->setCreateMonitorCallback(bind(&MApp::createMonitorCallback, this, placeholders::_1, placeholders::_2));
 	m_pMServer->setRemoveMonitorCallback(bind(&MApp::removeMonitorCallback, this, placeholders::_1));
 	m_pMServer->setup(12345, 12346);
+
+	return 0;
+}
+
+int MApp::initUsbManager() {
+	m_pMUsbManager = new MUsbManager(12345);
+
+	return 0;
+}
+
+int MApp::initMonitorManager() {
+	if (!m_pMonitorManager->Initialize()) {
+		printf("Failed to initialize MonitorManager\n");
+		return 1;
+	}
+
+	return 0;
+}
+
+int MApp::run() {
+	if (initDevice() != 0) {
+		return 1;
+	}
+
+	if (initMonitorManager() != 0) {
+		return 1;
+	}
+
+	if (initServer() != 0) {
+		return 1;
+	}
+
+	if (initUsbManager() != 0) {
+		return 1;
+	}
 
 	thread serverThread([this]() {
 		m_pMServer->run();
 	});
 	serverThread.detach();
 
-	m_pMUsbManager = new MUsbManager(12345);
 	m_pMUsbManager->start();
 
+	m_running = true;
 	return eventLoop();
+}
 
+void MApp::stop() {
+	m_running = false;
+	m_cv.notify_one();
+
+	while (!m_finished);
+
+	return;
 }
 
 int MApp::eventLoop() {
-	while (true) {
-		this_thread::sleep_for(3000ms);
+	std::unique_lock<std::mutex> lock(m_mutex);
+
+	while (m_running) {
+		m_cv.wait_for(lock, 3000ms, [this] {
+			return !m_running; // проснуться, если остановили
+		});
+
+		if (!m_running) break;
+
+		lock.unlock();
+
 		try {
-			//m_mServer->broadcastMessage("Hi Misha My Friend");
 			m_pMServer->sendRDPacket();
 		}
 		catch (const exception& ex) {
 			cerr << "Ошибка отправки: " << boost::locale::conv::to_utf<char>(ex.what(), "Windows-1251") << endl;
-
 		}
+
+		lock.lock();
 	}
+	m_finished = true;
 	return 0;
 }
 
@@ -152,26 +186,6 @@ void MApp::createMonitorCallback(MonitorConfig config, std::shared_ptr<MClient> 
 
 		m_pMonitorManager->AddMonitor(newMonitor);
 	}
-	//sendFrameCallback(m_MonitorClient.right.at(client), 0, );
-	//testSend(client);
-}
-
-void MApp::testSend(std::shared_ptr<MClient> client) {
-	int width, height, channels;
-
-	// 1. Получаем информацию о файле перед полной загрузкой
-	if (!stbi_info("input.png", &width, &height, &channels)) {
-		std::cerr << "Could not read file info" << std::endl;
-		return ;
-	}
-
-	unsigned char* imgData = stbi_load("input.png", &width, &height, &channels, 4);
-	if (!imgData) {
-		std::cerr << "Could not load PNG file" << std::endl;
-		return ;
-	}
-	sendFrameCallback(m_MonitorClient.right.at(client), 0,width*height*channels,0,imgData);
-	stbi_image_free(imgData);
 }
 
 void MApp::removeMonitorCallback(std::shared_ptr<MClient> client) {
@@ -229,7 +243,6 @@ CreationCallback(
 )
 {
 	HANDLE hEvent = *(HANDLE*)pContext;
-	printf("dfsfs");
 	SetEvent(hEvent);
 	UNREFERENCED_PARAMETER(hSwDevice);
 	UNREFERENCED_PARAMETER(hrCreateResult);
