@@ -10,9 +10,7 @@
 #include <wrl.h>
 #include <wchar.h>
 #include <functional>
-
 #include <windows.h>
-
 #include <swdevice.h>
 #include <span>
 #include <dxgi.h>
@@ -22,7 +20,6 @@
 
 #include "../Common.h"
 #include "../VideoBuffer.h"
-#include "GpuDisplay.h"
 #include "TimeProfiler.h"
 
 class Monitor;
@@ -51,7 +48,6 @@ public:
     std::thread& GetThread();
     
 private:
-    GpuDisplay* m_gDisplay;
     Microsoft::WRL::ComPtr<ID3D11Device> m_device;
     Microsoft::WRL::ComPtr<ID3D11DeviceContext> m_context;
 
@@ -89,21 +85,18 @@ public:
 
     DriverInfo GetDriverInfo() const;
 
-    // Функция для FRAME_READY_EVENT со своим внутренним ID
     static std::wstring GetNextFrameReadyEvent() {
         static int frameReadyId = 0;
         frameReadyId++;
         return std::wstring(L"Global\\IddSampleFrameReady") + L"_" + std::to_wstring(frameReadyId);
     }
 
-    // Функция для FRAME_PROCESSED_EVENT со своим внутренним ID
     static std::wstring  GetNextFrameProcessedEvent() {
         static int frameProcessedId = 0;
         frameProcessedId++;
         return std::wstring(L"Global\\IddSampleFrameProcessed") + L"_" + std::to_wstring(frameProcessedId);
     }
 
-    // Функция для SHARED_MEMORY_NAME со своим внутренним ID
     static std::wstring GetNextSharedMemoryName() {
         static int sharedMemoryId = 0;
         sharedMemoryId++;

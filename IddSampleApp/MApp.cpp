@@ -1,8 +1,5 @@
 ﻿#include "MApp.h"
 
-#define STB_IMAGE_IMPLEMENTATION
-#include <stb_image.h>
-
 VOID WINAPI
 CreationCallback(
 	_In_ HSWDEVICE hSwDevice,
@@ -40,23 +37,23 @@ MApp::~MApp() {
 int MApp::initDevice() {
 	HANDLE hEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
 	if (!hEvent) {
-		printf("Failed to create event\n");
+		printf("Failed to create event!\n");
 		return 1;
 	}
 	
 	SW_DEVICE_CREATE_INFO createInfo = { 0 };
 
 	createInfo.cbSize = sizeof(createInfo);
-	createInfo.pszzCompatibleIds = L"IddSampleDriver\0\0";
-	createInfo.pszInstanceId = L"IddSampleDriver";
-	createInfo.pszzHardwareIds = L"IddSampleDriver\0\0";
-	createInfo.pszDeviceDescription = L"Idd Sample Driver";
+	createInfo.pszzCompatibleIds = L"MAppDriver\0\0";
+	createInfo.pszInstanceId = L"MAppDriver";
+	createInfo.pszzHardwareIds = L"MAppDriver\0\0";
+	createInfo.pszDeviceDescription = L"MApp Driver";
 	createInfo.CapabilityFlags = SWDeviceCapabilitiesRemovable |
 		SWDeviceCapabilitiesSilentInstall |
 		SWDeviceCapabilitiesDriverRequired;
 
 	// Create the device
-	HRESULT hr = SwDeviceCreate(L"IddSampleDriver",
+	HRESULT hr = SwDeviceCreate(L"MAppDriver",
 		L"HTREE\\ROOT\\0",
 		&createInfo,
 		0,
@@ -77,10 +74,10 @@ int MApp::initDevice() {
 
 	if (waitResult != WAIT_OBJECT_0)
 	{
-		printf("Wait for device creation failed\n");
+		printf("Wait for device creation failed.\n");
 		return 1;
 	}
-	printf("Device created successfuly");
+	printf("Device created successfuly!\n");
 	
 	return 0;
 }
@@ -101,7 +98,7 @@ int MApp::initUsbManager() {
 
 int MApp::initMonitorManager() {
 	if (!m_pMonitorManager->Initialize()) {
-		printf("Failed to initialize MonitorManager\n");
+		printf("Failed to initialize MonitorManager!\n");
 		return 1;
 	}
 

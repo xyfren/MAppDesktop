@@ -23,5 +23,15 @@ void AppCore::stop() {
 }
 
 void AppCore::worker() {
-    m_pMApp->run();
+    if (m_pMApp->run() != 0) {
+        printf("App complete with errors!!!\n");
+        printf("Press enter to exit...\n");
+        cin.get();
+
+        exit(1);
+    }
+    else {
+        printf("App complete successfully!\n");
+        exit(0);
+    }
 }

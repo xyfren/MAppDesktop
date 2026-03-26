@@ -30,9 +30,6 @@
     <ClCompile Include="DataServer.cpp">
       <Filter>AppCore\Server</Filter>
     </ClCompile>
-    <ClCompile Include="GpuDisplay.cpp">
-      <Filter>AppCore\MonitorManager</Filter>
-    </ClCompile>
     <ClCompile Include="main.cpp" />
     <ClCompile Include="VideoBuffer.cpp">
       <Filter>AppCore\MonitorManager</Filter>
@@ -78,9 +75,6 @@
     </ClInclude>
     <ClInclude Include="DataServer.h">
       <Filter>AppCore\Server</Filter>
-    </ClInclude>
-    <ClInclude Include="GpuDisplay.h">
-      <Filter>AppCore\MonitorManager</Filter>
     </ClInclude>
     <ClInclude Include="MClient.h">
       <Filter>AppCore\Server</Filter>

@@ -286,7 +286,7 @@ NTSTATUS IddSampleDeviceAdd(WDFDRIVER Driver, PWDFDEVICE_INIT pDeviceInit)
 
     UNICODE_STRING  symLinkName = { 0 };
 
-    RtlInitUnicodeString(&symLinkName, L"\\DosDevices\\Global\\IddSampleDriver");
+    RtlInitUnicodeString(&symLinkName, L"\\DosDevices\\Global\\MAppDriver");
 
     WDFDEVICE Device = nullptr;
     Status = WdfDeviceCreate(&pDeviceInit, &Attr, &Device);

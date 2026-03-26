@@ -13,7 +13,7 @@ bool MonitorManager::Initialize() {
     D3D_FEATURE_LEVEL selectedFeatureLevel;
 
     HRESULT hr = D3D11CreateDevice(
-        nullptr,                      // адаптер по умолчанию
+        nullptr,                      // default adapter
         D3D_DRIVER_TYPE_HARDWARE,
         nullptr,
         flags,
@@ -27,7 +27,8 @@ bool MonitorManager::Initialize() {
     if (FAILED(hr)) return false;
 
     if (!ConnectToDriver()) {
-        printf("ConnectToDriver fail\n");
+        printf("ConnectToDriver failed.\n");
+        printf("Please install the driver.\n");
         return false;
     }
     return true;
@@ -38,10 +39,10 @@ bool MonitorManager::ConnectToDriver() {
 }
 
 bool MonitorManager::AddMonitor(std::shared_ptr<Monitor> pMonitor) {
-	auto prevPrimaryRes = GetPrimaryMonitorResolution();
+    auto prevPrimaryRes = GetPrimaryMonitorResolution();
 
-	pMonitor->setID3D11Device(m_device.Get());
-	pMonitor->setID3D11DeviceContext(m_context.Get());
+    pMonitor->setID3D11Device(m_device.Get());
+    pMonitor->setID3D11DeviceContext(m_context.Get());
 
     m_Monitors.push_back(pMonitor);
 
@@ -58,10 +59,10 @@ bool MonitorManager::AddMonitor(std::shared_ptr<Monitor> pMonitor) {
     swprintf_s(sharedTextureName2, GetNextSharedTextureName(2).c_str());
 
     if (!pMonitor->Initialize(frameReadyName, frameProcessedName, sharedMemoryName, sharedTextureName1, sharedTextureName2)) {
-        std::cout << "Ошибка инициализации\n";
+        printf("Monitor initialization failed.\n");
         return false;
     }
-    std::cout << "инициализация прошла успешно\n";
+    printf("Monitor initialized successfully.\n");
 
     CreateMonitorRequest request = {};
     request.config = pMonitor->GetConfig();
@@ -85,11 +86,12 @@ bool MonitorManager::AddMonitor(std::shared_ptr<Monitor> pMonitor) {
         printf("DeviceIoControl failed. Error: %d (0x%x)\n", err, err);
         return false;
     }
+    printf("DeviceIoControl succeeded. Bytes returned: %lu\n", bytesReturned);
+
     SetDesktopExtendMode();
-	std::cout << prevPrimaryRes.first << "x" << prevPrimaryRes.second << "\n";
     if (prevPrimaryRes.first != 0 && prevPrimaryRes.second)
-        SetPrimaryMonitorResolution(prevPrimaryRes.first,prevPrimaryRes.second);
-    printf("DeviceIoControl SUCCESS! Bytes returned: %lu\n", bytesReturned);
+        SetPrimaryMonitorResolution(prevPrimaryRes.first, prevPrimaryRes.second);
+
     return true;
 }
 
@@ -111,7 +113,7 @@ bool MonitorManager::RemoveMonitor(uint16_t monitorId) {
         return false;
     }
 
-    printf("DeviceIoControl SUCCESS! Bytes returned: %lu\n", bytesReturned);
+    printf("DeviceIoControl succeeded. Bytes returned: %lu\n", bytesReturned);
     return true;
 }
 
@@ -130,7 +132,7 @@ DriverInfo MonitorManager::GetDriverInfo() const {
         printf("DeviceIoControl failed. Error: %d (0x%x)\n", err, err);
     }
 
-    printf("DeviceIoControl SUCCESS! Bytes returned: %lu\n", bytesReturned);
+    printf("DeviceIoControl succeeded. Bytes returned: %lu\n", bytesReturned);
     return info;
 }
 
@@ -157,7 +159,7 @@ bool  MonitorManager::WaitOpenDriver(DWORD intervalMs, DWORD maxTotalTimeMs)
         ULONGLONG elapsed = GetTickCount64() - startTime;
         if (elapsed >= maxTotalTimeMs)
         {
-            printf("Elapsed: [%d]", elapsed);
+            printf("Elapsed: [%d]\n", elapsed);
             break;
         }
 
@@ -167,11 +169,11 @@ bool  MonitorManager::WaitOpenDriver(DWORD intervalMs, DWORD maxTotalTimeMs)
             lastError != ERROR_GEN_FAILURE &&
             lastError != 433L)
         {
-			printf("Last error: [%d]", lastError);
+            printf("Last error: [%d]\n", lastError);
             break;
         }
 
-        // Сколько осталось ждать
+        // How much time remains
         DWORD remain = (DWORD)(maxTotalTimeMs - elapsed);
         DWORD sleepTime = (remain < intervalMs) ? remain : intervalMs;
 
@@ -190,7 +192,7 @@ std::pair<UINT32, UINT32> MonitorManager::GetPrimaryMonitorResolution() {
     UINT32 numPathArrayElements = 0;
     UINT32 numModeInfoArrayElements = 0;
 
-    // 1. Узнаем размер необходимых буферов для активных путей
+    // 1. Get buffer sizes for active paths
     LONG result = GetDisplayConfigBufferSizes(QDC_ONLY_ACTIVE_PATHS, &numPathArrayElements, &numModeInfoArrayElements);
     if (result != ERROR_SUCCESS) {
         return { 0, 0 };
@@ -199,7 +201,7 @@ std::pair<UINT32, UINT32> MonitorManager::GetPrimaryMonitorResolution() {
     std::vector<DISPLAYCONFIG_PATH_INFO> pathArray(numPathArrayElements);
     std::vector<DISPLAYCONFIG_MODE_INFO> modeInfoArray(numModeInfoArrayElements);
 
-    // 2. Получаем текущую конфигурацию системы
+    // 2. Query current system configuration
     result = QueryDisplayConfig(QDC_ONLY_ACTIVE_PATHS, &numPathArrayElements, pathArray.data(),
         &numModeInfoArrayElements, modeInfoArray.data(), nullptr);
 
@@ -207,15 +209,15 @@ std::pair<UINT32, UINT32> MonitorManager::GetPrimaryMonitorResolution() {
         return { 0, 0 };
     }
 
-    // 3. Ищем основной монитор (тот, что находится в координатах 0,0)
+    // 3. Find the primary monitor (at coordinates 0,0)
     for (UINT32 i = 0; i < numPathArrayElements; i++) {
         UINT32 modeIdx = pathArray[i].sourceInfo.modeInfoIdx;
 
-        // Проверяем границы массива и тип данных (должен быть Source Mode)
+        // Validate index and type (must be Source Mode)
         if (modeIdx < numModeInfoArrayElements &&
             modeInfoArray[modeIdx].infoType == DISPLAYCONFIG_MODE_INFO_TYPE_SOURCE) {
 
-            // Проверяем координаты (основной монитор всегда в 0,0)
+            // Primary monitor is always at (0,0)
             if (modeInfoArray[modeIdx].sourceMode.position.x == 0 &&
                 modeInfoArray[modeIdx].sourceMode.position.y == 0) {
 
@@ -227,7 +229,7 @@ std::pair<UINT32, UINT32> MonitorManager::GetPrimaryMonitorResolution() {
         }
     }
 
-    // Если основной монитор не найден (маловероятно, но всё же)
+    // Primary monitor not found (unlikely)
     return { 0, 0 };
 }
 void MonitorManager::SetPrimaryMonitorResolution(UINT32 width, UINT32 height) {
@@ -245,26 +247,24 @@ void MonitorManager::SetPrimaryMonitorResolution(UINT32 width, UINT32 height) {
 
     if (result != ERROR_SUCCESS) return;
 
-    std::cout << "Найдено " << numPathArrayElements << " активных путей." << std::endl;
-
     for (UINT32 i = 0; i < numPathArrayElements; i++) {
         UINT32 modeIdx = pathArray[i].sourceInfo.modeInfoIdx;
 
         if (modeIdx < numModeInfoArrayElements &&
             modeInfoArray[modeIdx].infoType == DISPLAYCONFIG_MODE_INFO_TYPE_SOURCE) {
 
-            // Если это основной монитор (координаты 0,0)
+            // Primary monitor is at (0,0)
             if (modeInfoArray[modeIdx].sourceMode.position.x == 0 &&
                 modeInfoArray[modeIdx].sourceMode.position.y == 0) {
 
                 modeInfoArray[modeIdx].sourceMode.width = width;
                 modeInfoArray[modeIdx].sourceMode.height = height;
 
-				std::cout << "Установка разрешения " << width << "x" << height << " для основного монитора." << std::endl;
+                printf("Setting primary monitor resolution to %ux%u.\n", width, height);
             }
         }
 
-        // Сбрасываем частоту, чтобы система выбрала её сама (защита от ошибки 87)
+        // Reset refresh rate so the system chooses it (prevents error 87)
         pathArray[i].targetInfo.refreshRate.Numerator = 0;
         pathArray[i].targetInfo.refreshRate.Denominator = 0;
     }
@@ -275,10 +275,10 @@ void MonitorManager::SetPrimaryMonitorResolution(UINT32 width, UINT32 height) {
     );
 
     if (result == ERROR_SUCCESS) {
-        std::cout << "Настройки успешно применены!" << std::endl;
+        printf("Settings applied successfully.\n");
     }
     else {
-        std::cout << "Ошибка SetDisplayConfig: " << result << std::endl;
+        printf("SetDisplayConfig failed: %d\n", result);
     }
 }
 
@@ -286,23 +286,22 @@ void MonitorManager::SetPrimaryMonitorResolution(UINT32 width, UINT32 height) {
 
 #pragma region Monitor
 
-Monitor::Monitor(const MonitorConfig& config):
+Monitor::Monitor(const MonitorConfig& config) :
     m_device(nullptr),
     m_context(nullptr),
     m_Config(config),
     m_pVideoBuffer(nullptr),
-    m_gDisplay(nullptr),
     m_running(false),
     m_threadFinished(false)
 {
-   
+
 }
 
 Monitor::~Monitor() {
     m_running = false;
 
     while (!m_threadFinished) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(50)); // не жёсткий busy wait
+        std::this_thread::sleep_for(std::chrono::milliseconds(50)); // not a hard busy wait
     }
 
     if (m_pVideoBuffer) {
@@ -319,14 +318,14 @@ void Monitor::setID3D11DeviceContext(ID3D11DeviceContext* context) {
 }
 
 void Monitor::setFrameCallback(SendFrameCallback sendFrameCallback) {
-	m_sendFrameCallback = sendFrameCallback;
+    m_sendFrameCallback = sendFrameCallback;
 }
 
-bool Monitor::Initialize(const wchar_t* frameReadyName, 
-                         const wchar_t* frameProcessedName, 
-                         const wchar_t* sharedMemoryName,
-                         const wchar_t* sharedTextureName1, 
-                         const wchar_t* sharedTextureName2)
+bool Monitor::Initialize(const wchar_t* frameReadyName,
+    const wchar_t* frameProcessedName,
+    const wchar_t* sharedMemoryName,
+    const wchar_t* sharedTextureName1,
+    const wchar_t* sharedTextureName2)
 {
     D3D11_TEXTURE2D_DESC stagingDesc = {};
     stagingDesc.Width = m_Config.width;
@@ -335,10 +334,10 @@ bool Monitor::Initialize(const wchar_t* frameReadyName,
     stagingDesc.ArraySize = 1;
     stagingDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
     stagingDesc.SampleDesc.Count = 1;
-    stagingDesc.Usage = D3D11_USAGE_STAGING; // Специальный тип памяти для передачи на CPU
-    stagingDesc.BindFlags = 0; // Staging не может быть Render Target
-    stagingDesc.MiscFlags = 0; // Staging нельзя расшарить между процессами
-    stagingDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ; // Разрешаем чтение процессору
+    stagingDesc.Usage = D3D11_USAGE_STAGING; // Special memory type for CPU readback
+    stagingDesc.BindFlags = 0; // Staging cannot be a render target
+    stagingDesc.MiscFlags = 0; // Staging cannot be shared between processes
+    stagingDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ; // Allow CPU read
 
     HRESULT hr = m_device->CreateTexture2D(&stagingDesc, nullptr, &m_stagingTexture1);
     if (FAILED(hr)) {
@@ -353,8 +352,8 @@ bool Monitor::Initialize(const wchar_t* frameReadyName,
     //m_gDisplay = new GpuDisplay(m_Config.width, m_Config.height, m_device.Get(), m_context.Get());
 
     m_pVideoBuffer = new VideoBuffer(m_Config.width, m_Config.height, m_Config.byteDepth);
-    if (!m_pVideoBuffer->Initialize(m_device,frameReadyName,frameProcessedName,sharedMemoryName,sharedTextureName1,sharedTextureName2)) {
-        printf("m_pVideoBuffer->Initialize ERROR\n");
+    if (!m_pVideoBuffer->Initialize(m_device, frameReadyName, frameProcessedName, sharedMemoryName, sharedTextureName1, sharedTextureName2)) {
+        printf("m_pVideoBuffer->Initialize failed.\n");
         return false;
     }
 
@@ -365,7 +364,7 @@ bool Monitor::Initialize(const wchar_t* frameReadyName,
 }
 
 void Monitor::Run() {
-	m_running = true;
+    m_running = true;
     while (m_running)
     {
         DWORD waitResult = WaitForSingleObject(
@@ -383,14 +382,11 @@ void Monitor::Run() {
         {
             auto frame = m_pVideoBuffer->GetLatestFrame();
 
-            //std::cout << "Новый кадр " << "id = " << frame.frameId <<"; idx = " << frame.bufferIdx << std::endl;
             TimeProfiler::instance().stamp("createFrame");
 
             uint16_t staleIdx = frame.bufferIdx ^ 1;
             IDXGIKeyedMutex* staleMutex = (staleIdx == 0) ? m_pVideoBuffer->m_mutex1.Get() : m_pVideoBuffer->m_mutex2.Get();
 
-            // Пытаемся забрать его с таймаутом 0. 
-            // Если он висит с ключом 1 (забыт), мы его тут же сбросим на 0.
             if (staleMutex->AcquireSync(1, 0) == S_OK) {
                 staleMutex->ReleaseSync(0);
             }
@@ -400,23 +396,23 @@ void Monitor::Run() {
 
             HRESULT hr = currentMutex->AcquireSync(1, 16);
             if (hr == WAIT_TIMEOUT) {
-                printf("Timeout");
+                printf("Timeout.\n");
                 break;
             }
             else if (FAILED(hr)) {
                 printf("[GpuDisplay] AcquireSync failed: 0x%08X\n", hr);
                 break;
             }
-			
+
             m_context->CopyResource(stageTexture, frame.texture);
-            // 4. Освобождаем мьютекс как можно быстрее (Ключ 0 - отдаем драйверу)
+            // 4. Release the mutex as soon as possible (Key 0 - return control to the driver)
             hr = currentMutex->ReleaseSync(0);
 
-            // 2. Мапим Staging-текстуру
+            // 2. Map staging texture
             D3D11_MAPPED_SUBRESOURCE mappedResource;
-           
+
             hr = m_context->Map(stageTexture, 0, D3D11_MAP_READ, 0, &mappedResource);
-            
+
 
             if (SUCCEEDED(hr))
             {
@@ -428,9 +424,9 @@ void Monitor::Run() {
                 m_context->Unmap(stageTexture, 0);
             }
             else {
-				printf("Failed to map texture. Error: 0x%lx\n", hr);
+                printf("Failed to map texture. Error: 0x%lx\n", hr);
             }
-            
+
 
 
             break;
@@ -439,17 +435,17 @@ void Monitor::Run() {
         case WAIT_TIMEOUT:
         {
 
-            //std::cout << "Таймаут ожидания кадра" << std::endl;
+            //printf("Frame wait timeout.\n");
             break;
         }
 
         case WAIT_FAILED:
-            std::cerr << "Ошибка WaitForSingleObject: " << GetLastError() << "\n";
+            std::cerr << "WaitForSingleObject failed: " << GetLastError() << "\n";
             m_running = false;
             break;
 
         default:
-            // Не должно произойти
+            // Should not happen
             break;
         }
     }
@@ -461,4 +457,3 @@ std::thread& Monitor::GetThread() {
 }
 
 #pragma endregion
-

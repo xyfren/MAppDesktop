@@ -77,6 +77,10 @@
     <LibraryPath>C:\libs\ffmpeg\x64-windows\lib;$(LibraryPath)</LibraryPath>
     <IncludePath>C:\libs\ffmpeg\x64-windows\include;$(IncludePath)</IncludePath>
   </PropertyGroup>
+  <PropertyGroup Label="Vcpkg">
+    <VcpkgXUseBuiltInApplocalDeps>false</VcpkgXUseBuiltInApplocalDeps>
+    <VcpkgEnableManifest>false</VcpkgEnableManifest>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
@@ -109,11 +113,7 @@
       </EntryPointSymbol>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy /y "%LOCALAPPDATA%\Android\Sdk\platform-tools\adb.exe" "$(OutDir)"
-
-xcopy /y "%LOCALAPPDATA%\Android\Sdk\platform-tools\AdbWinApi.dll" "$(OutDir)"
-
-xcopy /y "%LOCALAPPDATA%\Android\Sdk\platform-tools\AdbWinUsbApi.dll" "$(OutDir)"</Command>
+      <Command>if not exist "C:\libs\ffmpeg\x64-windows\bin" (echo FFmpeg folder not found) else (xcopy /Y "C:\libs\ffmpeg\x64-windows\bin\*.dll" "$(TargetDir)" &gt; nul &amp; echo DLLs copied)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">
@@ -156,6 +156,9 @@ xcopy /y "%LOCALAPPDATA%\Android\Sdk\platform-tools\AdbWinUsbApi.dll" "$(OutDir)
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;swdevice.lib;avdevice.lib;avfilter.lib;avformat.lib;avutil.lib;swresample.lib;swscale.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PostBuildEvent>
+      <Command>if not exist "C:\libs\ffmpeg\x64-windows\bin" (echo FFmpeg folder not found) else (xcopy /Y "C:\libs\ffmpeg\x64-windows\bin\*.dll" "$(TargetDir)" &gt; nul &amp; echo DLLs copied)</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="AppCore.cpp" />
@@ -163,7 +166,6 @@ xcopy /y "%LOCALAPPDATA%\Android\Sdk\platform-tools\AdbWinUsbApi.dll" "$(OutDir)
     <ClCompile Include="DataServer.cpp" />
     <ClCompile Include="FFmpegEncoder.cpp" />
     <ClCompile Include="FrameManager.cpp" />
-    <ClCompile Include="GpuDisplay.cpp" />
     <ClCompile Include="JpegEncoder.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="AppWindow.cpp" />
@@ -191,7 +193,6 @@ xcopy /y "%LOCALAPPDATA%\Android\Sdk\platform-tools\AdbWinUsbApi.dll" "$(OutDir)
     <ClInclude Include="SPacket.h" />
     <ClInclude Include="FPacket.h" />
     <ClInclude Include="FrameManager.h" />
-    <ClInclude Include="GpuDisplay.h" />
     <ClInclude Include="MApp.h" />
     <ClInclude Include="MClient.h" />
     <ClInclude Include="MonitorManager.h" />
