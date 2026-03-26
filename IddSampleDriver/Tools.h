@@ -151,8 +151,10 @@ namespace IddTools
         edid[65] = 5 & 0x0F;          // V sync width
 
         // Размер изображения в мм (примерно 0.264 мм/пиксель → 23" монитор)
-        uint16_t h_mm = (uint16_t)(width * 0.2646);
-        uint16_t v_mm = (uint16_t)(height * 0.2646);
+      /*  uint16_t h_mm = (uint16_t)(width * 0.2646);
+        uint16_t v_mm = (uint16_t)(height * 0.2646);*/
+        uint16_t h_mm = (uint16_t)(width );
+        uint16_t v_mm = (uint16_t)(height);
         edid[66] = h_mm & 0xFF;                    // Младшие 8 бит горизонтального размера
         edid[67] = v_mm & 0xFF;                    // Младшие 8 бит вертикального размера
         edid[68] = ((h_mm >> 8) & 0x0F) | (((v_mm >> 8) & 0x0F) << 4);  // Старшие 4 бита h_mm + старшие 4 бита v_mm

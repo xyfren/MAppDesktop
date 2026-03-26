@@ -102,7 +102,7 @@
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
-      <SubSystem>Console</SubSystem>
+      <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;swdevice.lib;avcodec.lib;avdevice.lib;avfilter.lib;avformat.lib;avutil.lib;swresample.lib;swscale.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <EntryPointSymbol>
@@ -150,7 +150,7 @@ xcopy /y "%LOCALAPPDATA%\Android\Sdk\platform-tools\AdbWinUsbApi.dll" "$(OutDir)
       <AdditionalIncludeDirectories>C:\libs\ffmpeg\x64-windows\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <SubSystem>Console</SubSystem>
+      <SubSystem>Windows</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -171,6 +171,7 @@ xcopy /y "%LOCALAPPDATA%\Android\Sdk\platform-tools\AdbWinUsbApi.dll" "$(OutDir)
     <ClCompile Include="MonitorManager.cpp" />
     <ClCompile Include="MServer.cpp" />
     <ClCompile Include="MUsbManager.cpp" />
+    <ClCompile Include="UIUtils.cpp" />
     <ClCompile Include="VideoBuffer.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -196,6 +197,7 @@ xcopy /y "%LOCALAPPDATA%\Android\Sdk\platform-tools\AdbWinUsbApi.dll" "$(OutDir)
     <ClInclude Include="MonitorManager.h" />
     <ClInclude Include="MServer.h" />
     <ClInclude Include="TimeProfiler.h" />
+    <ClInclude Include="UIUtils.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\IddSampleDriver\IddSampleDriver.vcxproj">

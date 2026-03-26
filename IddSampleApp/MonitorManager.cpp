@@ -38,6 +38,8 @@ bool MonitorManager::ConnectToDriver() {
 }
 
 bool MonitorManager::AddMonitor(std::shared_ptr<Monitor> pMonitor) {
+	auto prevPrimaryRes = GetPrimaryMonitorResolution();
+
 	pMonitor->setID3D11Device(m_device.Get());
 	pMonitor->setID3D11DeviceContext(m_context.Get());
 
@@ -83,7 +85,10 @@ bool MonitorManager::AddMonitor(std::shared_ptr<Monitor> pMonitor) {
         printf("DeviceIoControl failed. Error: %d (0x%x)\n", err, err);
         return false;
     }
-
+    SetDesktopExtendMode();
+	std::cout << prevPrimaryRes.first << "x" << prevPrimaryRes.second << "\n";
+    if (prevPrimaryRes.first != 0 && prevPrimaryRes.second)
+        SetPrimaryMonitorResolution(prevPrimaryRes.first,prevPrimaryRes.second);
     printf("DeviceIoControl SUCCESS! Bytes returned: %lu\n", bytesReturned);
     return true;
 }
@@ -175,6 +180,106 @@ bool  MonitorManager::WaitOpenDriver(DWORD intervalMs, DWORD maxTotalTimeMs)
         Sleep(sleepTime);
     }
     return false;
+}
+
+void MonitorManager::SetDesktopExtendMode() {
+    SetDisplayConfig(0, NULL, 0, NULL, SDC_TOPOLOGY_EXTEND | SDC_APPLY);
+}
+
+std::pair<UINT32, UINT32> MonitorManager::GetPrimaryMonitorResolution() {
+    UINT32 numPathArrayElements = 0;
+    UINT32 numModeInfoArrayElements = 0;
+
+    // 1. Узнаем размер необходимых буферов для активных путей
+    LONG result = GetDisplayConfigBufferSizes(QDC_ONLY_ACTIVE_PATHS, &numPathArrayElements, &numModeInfoArrayElements);
+    if (result != ERROR_SUCCESS) {
+        return { 0, 0 };
+    }
+
+    std::vector<DISPLAYCONFIG_PATH_INFO> pathArray(numPathArrayElements);
+    std::vector<DISPLAYCONFIG_MODE_INFO> modeInfoArray(numModeInfoArrayElements);
+
+    // 2. Получаем текущую конфигурацию системы
+    result = QueryDisplayConfig(QDC_ONLY_ACTIVE_PATHS, &numPathArrayElements, pathArray.data(),
+        &numModeInfoArrayElements, modeInfoArray.data(), nullptr);
+
+    if (result != ERROR_SUCCESS) {
+        return { 0, 0 };
+    }
+
+    // 3. Ищем основной монитор (тот, что находится в координатах 0,0)
+    for (UINT32 i = 0; i < numPathArrayElements; i++) {
+        UINT32 modeIdx = pathArray[i].sourceInfo.modeInfoIdx;
+
+        // Проверяем границы массива и тип данных (должен быть Source Mode)
+        if (modeIdx < numModeInfoArrayElements &&
+            modeInfoArray[modeIdx].infoType == DISPLAYCONFIG_MODE_INFO_TYPE_SOURCE) {
+
+            // Проверяем координаты (основной монитор всегда в 0,0)
+            if (modeInfoArray[modeIdx].sourceMode.position.x == 0 &&
+                modeInfoArray[modeIdx].sourceMode.position.y == 0) {
+
+                return {
+                    modeInfoArray[modeIdx].sourceMode.width,
+                    modeInfoArray[modeIdx].sourceMode.height
+                };
+            }
+        }
+    }
+
+    // Если основной монитор не найден (маловероятно, но всё же)
+    return { 0, 0 };
+}
+void MonitorManager::SetPrimaryMonitorResolution(UINT32 width, UINT32 height) {
+    UINT32 numPathArrayElements = 0;
+    UINT32 numModeInfoArrayElements = 0;
+
+    LONG result = GetDisplayConfigBufferSizes(QDC_ONLY_ACTIVE_PATHS, &numPathArrayElements, &numModeInfoArrayElements);
+    if (result != ERROR_SUCCESS) return;
+
+    std::vector<DISPLAYCONFIG_PATH_INFO> pathArray(numPathArrayElements);
+    std::vector<DISPLAYCONFIG_MODE_INFO> modeInfoArray(numModeInfoArrayElements);
+
+    result = QueryDisplayConfig(QDC_ONLY_ACTIVE_PATHS, &numPathArrayElements, pathArray.data(),
+        &numModeInfoArrayElements, modeInfoArray.data(), nullptr);
+
+    if (result != ERROR_SUCCESS) return;
+
+    std::cout << "Найдено " << numPathArrayElements << " активных путей." << std::endl;
+
+    for (UINT32 i = 0; i < numPathArrayElements; i++) {
+        UINT32 modeIdx = pathArray[i].sourceInfo.modeInfoIdx;
+
+        if (modeIdx < numModeInfoArrayElements &&
+            modeInfoArray[modeIdx].infoType == DISPLAYCONFIG_MODE_INFO_TYPE_SOURCE) {
+
+            // Если это основной монитор (координаты 0,0)
+            if (modeInfoArray[modeIdx].sourceMode.position.x == 0 &&
+                modeInfoArray[modeIdx].sourceMode.position.y == 0) {
+
+                modeInfoArray[modeIdx].sourceMode.width = width;
+                modeInfoArray[modeIdx].sourceMode.height = height;
+
+				std::cout << "Установка разрешения " << width << "x" << height << " для основного монитора." << std::endl;
+            }
+        }
+
+        // Сбрасываем частоту, чтобы система выбрала её сама (защита от ошибки 87)
+        pathArray[i].targetInfo.refreshRate.Numerator = 0;
+        pathArray[i].targetInfo.refreshRate.Denominator = 0;
+    }
+    result = SetDisplayConfig(
+        numPathArrayElements, pathArray.data(),
+        numModeInfoArrayElements, modeInfoArray.data(),
+        SDC_APPLY | SDC_USE_SUPPLIED_DISPLAY_CONFIG | SDC_ALLOW_CHANGES | SDC_SAVE_TO_DATABASE
+    );
+
+    if (result == ERROR_SUCCESS) {
+        std::cout << "Настройки успешно применены!" << std::endl;
+    }
+    else {
+        std::cout << "Ошибка SetDisplayConfig: " << result << std::endl;
+    }
 }
 
 #pragma endregion

@@ -118,6 +118,9 @@ public:
     }
 
 private:
+    void SetDesktopExtendMode();
+    std::pair<UINT32, UINT32> GetPrimaryMonitorResolution();
+    void SetPrimaryMonitorResolution(UINT32 width, UINT32 height);
     bool WaitOpenDriver(DWORD intervalMs, DWORD maxTotalTimeMs);
 
 };

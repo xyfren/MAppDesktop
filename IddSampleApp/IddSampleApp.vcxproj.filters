@@ -1,113 +1,139 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="Server">
+    <Filter Include="AppCore">
+      <UniqueIdentifier>{a2302421-6ce1-4672-aec1-fe04bad9b5ed}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="AppWindow">
+      <UniqueIdentifier>{b80a3a7b-b81b-47a9-af71-2425176f8fdf}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="AppCore\UsbManager">
+      <UniqueIdentifier>{2807ba26-433d-4a60-8e01-c7bfc5102de2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="AppCore\Server">
       <UniqueIdentifier>{e1aa4fa2-aefd-4f9f-9a1e-5311e38054bc}</UniqueIdentifier>
     </Filter>
-    <Filter Include="MonitorManager">
+    <Filter Include="AppCore\MonitorManager">
       <UniqueIdentifier>{a4aacdc5-38fa-493d-b594-93bff4c904be}</UniqueIdentifier>
     </Filter>
-    <Filter Include="FrameManager">
+    <Filter Include="AppCore\FrameManager">
       <UniqueIdentifier>{3b902ebc-f8f4-4ae7-b011-d7fc29360a35}</UniqueIdentifier>
     </Filter>
-    <Filter Include="FrameManager\Coders">
+    <Filter Include="AppCore\FrameManager\Coders">
       <UniqueIdentifier>{abcda458-45d9-4010-b0d9-453ba2e08934}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="UsbManager">
-      <UniqueIdentifier>{2807ba26-433d-4a60-8e01-c7bfc5102de2}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ConnectionServer.cpp">
-      <Filter>Server</Filter>
+      <Filter>AppCore\Server</Filter>
     </ClCompile>
     <ClCompile Include="DataServer.cpp">
-      <Filter>Server</Filter>
+      <Filter>AppCore\Server</Filter>
     </ClCompile>
     <ClCompile Include="GpuDisplay.cpp">
-      <Filter>MonitorManager</Filter>
+      <Filter>AppCore\MonitorManager</Filter>
     </ClCompile>
     <ClCompile Include="main.cpp" />
     <ClCompile Include="VideoBuffer.cpp">
-      <Filter>MonitorManager</Filter>
+      <Filter>AppCore\MonitorManager</Filter>
     </ClCompile>
     <ClCompile Include="MonitorManager.cpp">
-      <Filter>MonitorManager</Filter>
+      <Filter>AppCore\MonitorManager</Filter>
     </ClCompile>
-    <ClCompile Include="MApp.cpp" />
     <ClCompile Include="MServer.cpp">
-      <Filter>Server</Filter>
+      <Filter>AppCore\Server</Filter>
     </ClCompile>
     <ClCompile Include="FrameManager.cpp">
-      <Filter>FrameManager</Filter>
+      <Filter>AppCore\FrameManager</Filter>
     </ClCompile>
     <ClCompile Include="FFmpegEncoder.cpp">
-      <Filter>FrameManager\Coders</Filter>
+      <Filter>AppCore\FrameManager\Coders</Filter>
     </ClCompile>
     <ClCompile Include="JpegEncoder.cpp">
-      <Filter>FrameManager\Coders</Filter>
+      <Filter>AppCore\FrameManager\Coders</Filter>
     </ClCompile>
     <ClCompile Include="MUsbManager.cpp">
-      <Filter>UsbManager</Filter>
+      <Filter>AppCore\UsbManager</Filter>
     </ClCompile>
-    <ClCompile Include="AppWindow.cpp" />
-    <ClCompile Include="AppCore.cpp" />
+    <ClCompile Include="AppCore.cpp">
+      <Filter>AppCore</Filter>
+    </ClCompile>
+    <ClCompile Include="AppWindow.cpp">
+      <Filter>AppWindow</Filter>
+    </ClCompile>
+    <ClCompile Include="MApp.cpp">
+      <Filter>AppCore</Filter>
+    </ClCompile>
+    <ClCompile Include="UIUtils.cpp">
+      <Filter>AppWindow</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="APacket.h">
-      <Filter>Server</Filter>
+      <Filter>AppCore\Server</Filter>
     </ClInclude>
     <ClInclude Include="..\Common.h" />
     <ClInclude Include="ConnectionServer.h">
-      <Filter>Server</Filter>
+      <Filter>AppCore\Server</Filter>
     </ClInclude>
     <ClInclude Include="DataServer.h">
-      <Filter>Server</Filter>
+      <Filter>AppCore\Server</Filter>
     </ClInclude>
     <ClInclude Include="GpuDisplay.h">
-      <Filter>MonitorManager</Filter>
+      <Filter>AppCore\MonitorManager</Filter>
     </ClInclude>
-    <ClInclude Include="MApp.h" />
     <ClInclude Include="MClient.h">
-      <Filter>Server</Filter>
+      <Filter>AppCore\Server</Filter>
     </ClInclude>
     <ClInclude Include="MonitorManager.h">
-      <Filter>MonitorManager</Filter>
+      <Filter>AppCore\MonitorManager</Filter>
     </ClInclude>
     <ClInclude Include="MServer.h">
-      <Filter>Server</Filter>
+      <Filter>AppCore\Server</Filter>
     </ClInclude>
     <ClInclude Include="..\VideoBuffer.h">
-      <Filter>MonitorManager</Filter>
+      <Filter>AppCore\MonitorManager</Filter>
     </ClInclude>
     <ClInclude Include="DPacket.h">
-      <Filter>Server</Filter>
+      <Filter>AppCore\Server</Filter>
     </ClInclude>
     <ClInclude Include="FPacket.h">
-      <Filter>Server</Filter>
+      <Filter>AppCore\Server</Filter>
     </ClInclude>
     <ClInclude Include="FrameManager.h">
-      <Filter>FrameManager</Filter>
+      <Filter>AppCore\FrameManager</Filter>
     </ClInclude>
     <ClInclude Include="SPacket.h">
-      <Filter>Server</Filter>
+      <Filter>AppCore\Server</Filter>
     </ClInclude>
     <ClInclude Include="FFmpegEncoder.h">
-      <Filter>FrameManager\Coders</Filter>
+      <Filter>AppCore\FrameManager\Coders</Filter>
     </ClInclude>
     <ClInclude Include="JpegEncoder.h">
-      <Filter>FrameManager\Coders</Filter>
+      <Filter>AppCore\FrameManager\Coders</Filter>
     </ClInclude>
     <ClInclude Include="IEncoder.h">
-      <Filter>FrameManager</Filter>
+      <Filter>AppCore\FrameManager</Filter>
     </ClInclude>
     <ClInclude Include="MUsbManager.h">
-      <Filter>UsbManager</Filter>
+      <Filter>AppCore\UsbManager</Filter>
     </ClInclude>
-    <ClInclude Include="TimeProfiler.h" />
     <ClInclude Include="resource.h" />
-    <ClInclude Include="AppWindow.h" />
-    <ClInclude Include="AppCore.h" />
+    <ClInclude Include="AppCore.h">
+      <Filter>AppCore</Filter>
+    </ClInclude>
+    <ClInclude Include="AppWindow.h">
+      <Filter>AppWindow</Filter>
+    </ClInclude>
+    <ClInclude Include="MApp.h">
+      <Filter>AppCore</Filter>
+    </ClInclude>
+    <ClInclude Include="TimeProfiler.h">
+      <Filter>AppCore</Filter>
+    </ClInclude>
+    <ClInclude Include="UIUtils.h">
+      <Filter>AppWindow</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Resource.rc" />
