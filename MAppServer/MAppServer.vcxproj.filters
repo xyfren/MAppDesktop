@@ -1,3 +1,133 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="Current" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="main.cpp" />
+    <ClCompile Include="AppWindow.cpp">
+      <Filter>AppWindow</Filter>
+    </ClCompile>
+    <ClCompile Include="UIUtils.cpp">
+      <Filter>AppWindow</Filter>
+    </ClCompile>
+    <ClCompile Include="JpegEncoder.cpp">
+      <Filter>AppCore\FrameManager\Coders</Filter>
+    </ClCompile>
+    <ClCompile Include="FFmpegEncoder.cpp">
+      <Filter>AppCore\FrameManager\Coders</Filter>
+    </ClCompile>
+    <ClCompile Include="FrameManager.cpp">
+      <Filter>AppCore\FrameManager</Filter>
+    </ClCompile>
+    <ClCompile Include="MonitorManager.cpp">
+      <Filter>AppCore\MonitorManager</Filter>
+    </ClCompile>
+    <ClCompile Include="AppCore.cpp">
+      <Filter>AppCore</Filter>
+    </ClCompile>
+    <ClCompile Include="MApp.cpp">
+      <Filter>AppCore</Filter>
+    </ClCompile>
+    <ClCompile Include="ConnectionServer.cpp">
+      <Filter>AppCore\MServer</Filter>
+    </ClCompile>
+    <ClCompile Include="DataServer.cpp">
+      <Filter>AppCore\MServer</Filter>
+    </ClCompile>
+    <ClCompile Include="MServer.cpp">
+      <Filter>AppCore\MServer</Filter>
+    </ClCompile>
+    <ClCompile Include="VideoBuffer.cpp">
+      <Filter>AppCore\MonitorManager</Filter>
+    </ClCompile>
+    <ClCompile Include="MUsbManager.cpp">
+      <Filter>AppCore\MUsbManager</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\Common.h" />
+    <ClInclude Include="resource.h" />
+    <ClInclude Include="TimeProfiler.h" />
+    <ClInclude Include="AppWindow.h">
+      <Filter>AppWindow</Filter>
+    </ClInclude>
+    <ClInclude Include="UIUtils.h">
+      <Filter>AppWindow</Filter>
+    </ClInclude>
+    <ClInclude Include="JpegEncoder.h">
+      <Filter>AppCore\FrameManager\Coders</Filter>
+    </ClInclude>
+    <ClInclude Include="FFmpegEncoder.h">
+      <Filter>AppCore\FrameManager\Coders</Filter>
+    </ClInclude>
+    <ClInclude Include="FrameManager.h">
+      <Filter>AppCore\FrameManager</Filter>
+    </ClInclude>
+    <ClInclude Include="IEncoder.h">
+      <Filter>AppCore\FrameManager\Coders</Filter>
+    </ClInclude>
+    <ClInclude Include="MonitorManager.h">
+      <Filter>AppCore\MonitorManager</Filter>
+    </ClInclude>
+    <ClInclude Include="AppCore.h">
+      <Filter>AppCore</Filter>
+    </ClInclude>
+    <ClInclude Include="MApp.h">
+      <Filter>AppCore</Filter>
+    </ClInclude>
+    <ClInclude Include="ConnectionServer.h">
+      <Filter>AppCore\MServer</Filter>
+    </ClInclude>
+    <ClInclude Include="DataServer.h">
+      <Filter>AppCore\MServer</Filter>
+    </ClInclude>
+    <ClInclude Include="MClient.h">
+      <Filter>AppCore\MServer</Filter>
+    </ClInclude>
+    <ClInclude Include="MServer.h">
+      <Filter>AppCore\MServer</Filter>
+    </ClInclude>
+    <ClInclude Include="APacket.h">
+      <Filter>AppCore\MServer</Filter>
+    </ClInclude>
+    <ClInclude Include="FPacket.h">
+      <Filter>AppCore\MServer</Filter>
+    </ClInclude>
+    <ClInclude Include="SPacket.h">
+      <Filter>AppCore\MServer</Filter>
+    </ClInclude>
+    <ClInclude Include="DPacket.h">
+      <Filter>AppCore\MServer</Filter>
+    </ClInclude>
+    <ClInclude Include="..\VideoBuffer.h">
+      <Filter>AppCore\MonitorManager</Filter>
+    </ClInclude>
+    <ClInclude Include="MUsbManager.h">
+      <Filter>AppCore\MUsbManager</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Resource.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="AppCore">
+      <UniqueIdentifier>{067b6e00-9618-4a1d-b34b-91542f775202}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="AppWindow">
+      <UniqueIdentifier>{601f66bb-9964-46ea-aec2-35eb9e9b596d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="AppCore\MonitorManager">
+      <UniqueIdentifier>{8bb309c0-4699-45e3-bb21-57ac36d37a00}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="AppCore\FrameManager">
+      <UniqueIdentifier>{91f5c755-a7e4-4634-ae91-ff6bc15e6b0c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="AppCore\FrameManager\Coders">
+      <UniqueIdentifier>{3b3b779f-e656-4759-9dfc-e200862e3d96}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="AppCore\MServer">
+      <UniqueIdentifier>{965d5b83-cd4c-4cdb-9936-41b155626576}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="AppCore\MUsbManager">
+      <UniqueIdentifier>{d61773a5-077e-4aa6-b9b4-2e4f6b03c984}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
 </Project>
