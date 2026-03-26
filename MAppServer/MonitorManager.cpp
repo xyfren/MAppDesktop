@@ -28,7 +28,7 @@ bool MonitorManager::Initialize() {
 
     if (!ConnectToDriver()) {
         printf("ConnectToDriver failed.\n");
-        printf("Please install the driver.\n");
+        printf("PLEASE INSTALL THE DRIVER!!!\n");
         return false;
     }
     return true;

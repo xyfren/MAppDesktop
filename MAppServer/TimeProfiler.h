@@ -1,4 +1,4 @@
-#pragma once
+п»ї#pragma once
 
 #include <iostream>
 #include <chrono>
@@ -16,7 +16,7 @@ public:
         return inst;
     }
 
-    // Запоминает метку времени для конкретного события
+    // Р—Р°РїРѕРјРёРЅР°РµС‚ РјРµС‚РєСѓ РІСЂРµРјРµРЅРё РґР»СЏ РєРѕРЅРєСЂРµС‚РЅРѕРіРѕ СЃРѕР±С‹С‚РёСЏ
     void stamp(const std::string& eventName) {
         //auto now = std::chrono::high_resolution_clock::now();
         //std::lock_guard<std::mutex> lock(mtx);

@@ -20,9 +20,10 @@
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
-    <ProjectGuid>{ED59DFCA-E75B-4DD8-B5C2-6BFF77A225A6}</ProjectGuid>
-    <RootNamespace>IddSampleApp</RootNamespace>
+    <ProjectGuid>{2D54CB75-8B17-4F11-97DC-847B0244CD46}</ProjectGuid>
+    <RootNamespace>MAppServer</RootNamespace>
     <WindowsTargetPlatformVersion>$(LatestTargetPlatformVersion)</WindowsTargetPlatformVersion>
+    <ProjectName>MAppServer</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'" Label="Configuration">
@@ -201,7 +202,7 @@
     <ClInclude Include="UIUtils.h" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\IddSampleDriver\IddSampleDriver.vcxproj">
+    <ProjectReference Include="..\MAppDriver\MAppDriver.vcxproj">
       <Project>{2d54cb75-8b17-4f11-97dc-847b0244cd46}</Project>
     </ProjectReference>
   </ItemGroup>
