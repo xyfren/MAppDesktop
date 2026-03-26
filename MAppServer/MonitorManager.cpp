@@ -139,12 +139,13 @@ DriverInfo MonitorManager::GetDriverInfo() const {
 bool  MonitorManager::WaitOpenDriver(DWORD intervalMs, DWORD maxTotalTimeMs)
 {
     ULONGLONG startTime = GetTickCount64();
+
     DWORD lastError = 0;
 
     while (true)
     {
         m_hDriverDevice = CreateFileW(
-            L"\\\\.\\IddSampleDriver",
+            L"\\\\.\\MAppDriver",
             GENERIC_READ | GENERIC_WRITE,
             0, NULL, OPEN_EXISTING, 0, NULL
         );
